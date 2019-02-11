@@ -2,7 +2,7 @@ from keras.layers import Conv2D, MaxPool2D, Activation, Input
 from keras.models import Model
 
 
-def alexNet(input):
+def alexNet(img):
     """
     Module for Siamese Feature Extraction Sub network - Modified AlexNet
     In paper, the author used the modified AlexNet, where the groups from conv2 and conv4 are removed
@@ -22,7 +22,7 @@ def alexNet(input):
             return x
         return _conv_block
 
-    x = conv_block(filters=64, kernel_size=11, strides=2, idx=0)(input)
+    x = conv_block(filters=64, kernel_size=11, strides=2, idx=0)(img)
     x = conv_block(filters=192, kernel_size=5, strides=1, idx=1)(x)
     x = conv_block(filters=384, kernel_size=3, strides=1, idx=2, use_maxpool=False)(x)
     x = conv_block(filters=256, kernel_size=3, strides=1, idx=3, use_maxpool=False)(x)
@@ -34,15 +34,15 @@ def alexNet(input):
 def encoder(input_shape: tuple = (None, None, 3)) -> Model:
     """
     Siamese Feature Extraction Sub network
-    :param branch_name: Siamese-RPN has two branches. One for Template and the other for Detection
+    :param input_shape: input shape
     """
 
     input = Input(shape=input_shape, name='Input_Feature_Extraction')
     feature = alexNet(input)
 
-    return Model(input, feature, name='Feature Extraction')
+    return Model(input, feature, name='Feature_Extraction')
 
 
 if __name__ == '__main__':
-    encoder_t = encoder(input_shape=(255, 255, 3))
+    encoder_t = encoder(input_shape=(127, 127, 3))
     encoder_t.summary()
