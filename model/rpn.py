@@ -6,9 +6,10 @@ import tensorflow as tf
 
 class SiameseRPN:
     """
-    Custom RPN Layer to compute objectness and box coordinate in anchor
-    One Shot Detection is used to make online kernel during feed forward
-    The kernel's weight is extracted from the feature maps of template
+    There are two sub networks in SiamesRPN ( SiamesConv and encoder )
+    encoder from feature_extraction.py is used to compute feature map from template and detection images
+    The feature map extracted from template is used to make kernel in custom layer, SiamesConv
+    That kernel is used to compute RPN output, box regression and objectness from detection feature map
     """
     def __init__(self):
         self.feature_extraction = encoder()
@@ -36,6 +37,11 @@ class SiameseRPN:
 
 
 class SiameseConv(Layer):
+    """
+    Custom RPN Layer to compute objectness and box coordinate in anchor
+    One Shot Detection is used to make online kernel during feed forward
+    The kernel's weight is extracted from the feature maps of template
+    """
     def __init__(self, branch_name, anchor_num = 5, padding='VALID', **kwargs):
         self.padding = padding
         self.__branch_output = {'cls': 2, 'reg': 4}
