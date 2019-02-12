@@ -6,6 +6,7 @@ def alexNet(img):
     """
     Module for Siamese Feature Extraction Sub network - Modified AlexNet
     In paper, the author used the modified AlexNet, where the groups from conv2 and conv4 are removed
+    First three layers must be freezed after pretraining with IMAGENET dataset
     """
     def conv_block(filters, kernel_size, strides, idx, pool_size=3, pool_stride=2, activation='relu',
                    use_maxpool=True, use_activation=True):
@@ -20,23 +21,26 @@ def alexNet(img):
                 x = MaxPool2D(pool_size=pool_size, strides=pool_stride, name='Alex_Maxpool_{}'.format(idx))(x)
 
             return x
+
         return _conv_block
 
+    # ======== FREEZE ========
+    # PRETRAINED LAYER WITH IMAGENET DATASET
     x = conv_block(filters=64, kernel_size=11, strides=2, idx=0)(img)
     x = conv_block(filters=192, kernel_size=5, strides=1, idx=1)(x)
     x = conv_block(filters=384, kernel_size=3, strides=1, idx=2, use_maxpool=False)(x)
+    # ======== FREEZE ========
+
     x = conv_block(filters=256, kernel_size=3, strides=1, idx=3, use_maxpool=False)(x)
     x = conv_block(filters=256, kernel_size=3, strides=1, idx=4, use_maxpool=False, use_activation=False)(x)
 
     return x
 
 
-def encoder(input_shape: tuple = (None, None, 3)) -> Model:
+def encoder(input_shape=(None, None, 3)) -> Model:
     """
     Siamese Feature Extraction Sub network
-    :param input_shape: input shape
     """
-
     input = Input(shape=input_shape, name='Input_Feature_Extraction')
     feature = alexNet(input)
 
