@@ -64,6 +64,10 @@ class VotDataset():
         return x.split('/')[-1].split('.')[0]
 
     def xywh_to_x1y1x2y2(self, x:list):
+        """
+        VOT DATASET gt format is (left, top, width, height)
+        This function convert them into (left, top, right, bottom) format
+        """
         if not type(x) is list:
             raise ValueError('x should be list')
 
@@ -73,6 +77,11 @@ class VotDataset():
         return x
 
     def strfloat_to_int(self, x):
+        """
+        VOT DATASET gt coordinates are string float type (ex '125.3')
+        int('125.3') => Casting Error
+        float('125.3') => 125.3 and then int(125.3) => 125
+        """
         return int(float(x))
 
 
