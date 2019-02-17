@@ -32,11 +32,12 @@ class VotDataset():
             line = f.readline()
             if not line:
                 break
+            # Last element has '\n'.
             coordinates = line.split('\n')[0].split(',')
 
             if type(coordinates[0]) is str:
                 for idx in range(len(coordinates)):
-                    coordinates[idx] = self.strfloat_to_int(coordinates[idx])
+                    coordinates[idx] = self.string_float_to_int(coordinates[idx])
 
             box_list.append(coordinates)
         f.close()
@@ -76,7 +77,7 @@ class VotDataset():
 
         return x
 
-    def strfloat_to_int(self, x):
+    def string_float_to_int(self, x):
         """
         VOT DATASET gt coordinates are string float type (ex '125.3')
         int('125.3') => Casting Error
