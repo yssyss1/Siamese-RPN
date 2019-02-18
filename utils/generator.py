@@ -46,28 +46,26 @@ class BatchGenerator(Sequence):
 
         r, c, k = sample.shape
         if any([top, bottom, left, right]):
-            img_mean = tuple(map(int, sample.mean(axis=(0, 1))))
-            te_im = np.zeros((r + top + bottom, c + left + right, k), np.uint8)
-            te_im[top:top + r, left:left + c, :] = sample
+            channel_mean = tuple(map(int, sample.mean(axis=(0, 1))))
+            padded_image = np.zeros((r + top + bottom, c + left + right, k), np.uint8)
+            padded_image[top:top + r, left:left + c, :] = sample
             if top:
-                te_im[0:top, left:left + c, :] = img_mean
+                padded_image[0:top, left:left + c, :] = channel_mean
             if bottom:
-                te_im[r + top:, left:left + c, :] = img_mean
+                padded_image[r + top:, left:left + c, :] = channel_mean
             if left:
-                te_im[:, 0:left, :] = img_mean
+                padded_image[:, 0:left, :] = channel_mean
             if right:
-                te_im[:, c + left:, :] = img_mean
-            im_patch_original = te_im[int(y_min):int(y_max), int(x_min):int(x_max), :]
+                padded_image[:, c + left:, :] = channel_mean
+            center_crop_image = padded_image[int(y_min):int(y_max), int(x_min):int(x_max), :]
         else:
-            im_patch_original = sample[int(y_min):int(y_max), int(x_min):int(x_max), :]
+            center_crop_image = sample[int(y_min):int(y_max), int(x_min):int(x_max), :]
 
-        if not np.array_equal(im_patch_original.shape, (self.exemplar_size, self.exemplar_size, 3)):
+        if not np.array_equal(center_crop_image.shape, (self.exemplar_size, self.exemplar_size, 3)):
             raise ValueError('patch size must be (127, 127, 3)')
             # im_patch = cv2.resize(im_patch_original,
             #                       (self.exemplar_size, self.exemplar_size))
-        else:
-            im_patch = im_patch_original
-        return im_patch
+        return center_crop_image
 
 
 if __name__ == '__main__':
