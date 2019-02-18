@@ -1,6 +1,27 @@
 import numpy as np
 
 
+def get_label(anchors, gt):
+    """
+    Compute target from anchors and gt
+    This formula is introduced in the paper
+    """
+    anchor_x = anchors[:, :1]
+    anchor_y = anchors[:, 1:2]
+    anchor_w = anchors[:, 2:3]
+    anchor_h = anchors[:, 3:]
+
+    gt_x, gt_y, gt_w, gt_h = gt
+
+    target_x = (gt_x - anchor_x) / anchor_w
+    target_y = (gt_y - anchor_y) / anchor_h
+    target_w = np.log(gt_w / anchor_w)
+    target_h = np.log(gt_h / anchor_h)
+
+    regression_target = np.hstack((target_x, target_y, target_w, target_h))
+    return regression_target
+
+
 def generate_anchors(total_stride, base_size, scales, ratios, score_size):
     """
     Make anchor box with ratio and scale
