@@ -7,6 +7,7 @@ from PIL import Image, ImageOps, ImageStat, ImageDraw
 import numpy as np
 import random
 import os
+import sys
 
 
 class Anchor():
@@ -109,6 +110,9 @@ class Anchor():
         return intersection_area/all_area
 
     def diff_anchor_gt(self, gt):
+        """
+        Compute ground truth for box regression
+        """
         anchors, gt = self.anchors.copy(), gt.copy()
         diff = np.zeros_like(anchors, dtype=np.float32)
 
@@ -117,6 +121,7 @@ class Anchor():
         diff[:, 2] = np.log((gt[2] + self.eps) / (anchors[:, 2] + self.eps))
         diff[:, 3] = np.log((gt[3] + self.eps) / (anchors[:, 3] + self.eps))
 
+        # return (1445, ) list - ground truth for each anchors whose length is (1445, )
         return diff
 
     def pos_neg_anchor(self, gt, pos_num=16, neg_num=48, threshold_pos=0.5, threshold_neg=0.1):
@@ -140,6 +145,7 @@ class Anchor():
         neg_idx = np.random.choice(neg_candidate, neg_num, replace=False)
         neg[neg_idx] = 1
 
+        # (1445, ) size binary list ( 1 - positive sample, 0 - negative sample )
         return pos, neg
 
 
@@ -265,6 +271,8 @@ class TrainDataLoader(object):
         Insert padding to make square image and crop to feed in network with fixed size
         Template images are cropped into 127 x 127
         Detection images are cropped into 255 x 255
+
+        Images are padded with channel mean
         """
         template_img = Image.open(self.ret['template_img_path'])
         detection_img = Image.open(self.ret['detection_img_path'])
@@ -389,6 +397,8 @@ class TrainDataLoader(object):
         x12, y12 = self.ret['detection_rbcords_of_padding_image']
         x21, y21 = self.ret['target_tlcords_of_padding_image']
         x22, y22 = self.ret['target_rbcords_of_padding_image']
+
+        # Caculate target's relative coordinate with respect to padded detection image
         x1_of_d, y1_of_d, x3_of_d, y3_of_d = int(x21 - x11), int(y21 - y11), int(x22 - x11), int(y22 - y11)
         x1 = np.clip(x1_of_d, 0, x12 - x11).astype(np.float32)
         y1 = np.clip(y1_of_d, 0, y12 - y11).astype(np.float32)
@@ -425,8 +435,80 @@ class TrainDataLoader(object):
             save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
             im.save(save_path)
 
+    def generate_pos_neg_diff(self):
+        """
+        Decide positive and negative responsibility and generate ground truth for box regression
+        Anchors which has an responsibility for ground truth will be optimised to fit ground truth
+        """
+        gt_box_in_detection = self.ret['target_in_resized_detection_xywh'].copy()
+        pos, neg = self.anchor_generator.pos_neg_anchor(gt_box_in_detection)
+        diff = self.anchor_generator.diff_anchor_gt(gt_box_in_detection)
+        pos, neg, diff = pos.reshape((-1, 1)), neg.reshape((-1, 1)), diff.reshape((-1, 4))
+        class_target = np.array([-100.] * self.anchors.shape[0], np.int32)
+
+        # positive anchor
+        pos_index = np.where(pos == 1)[0]
+        pos_num = len(pos_index)
+        self.ret['pos_anchors'] = np.array(self.ret['anchors'][pos_index, :],
+                                           dtype=np.int32) if not pos_num == 0 else None
+        if pos_num > 0:
+            class_target[pos_index] = 1
+
+        # negative anchor
+        neg_index = np.where(neg == 1)[0]
+        neg_num = len(neg_index)
+        class_target[neg_index] = 0
+
+        # draw pos and neg anchor box
+        if self.check:
+            s = os.path.join(self.tmp_dir, '4_check_pos_neg_anchors')
+            os.makedirs(s, exist_ok=True)
+
+            im = self.ret['detection_cropped_resized'].copy()
+            draw = ImageDraw.Draw(im)
+            if pos_num == 16:
+                for i in range(pos_num):
+                    index = pos_index[i]
+                    cx, cy, w, h = self.anchors[index]
+                    if w * h == 0:
+                        print('anchor area error')
+                        sys.exit(0)
+                    x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+                    draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
+
+            for i in range(neg_num):
+                index = neg_index[i]
+                cx, cy, w, h = self.anchors[index]
+                x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
+            save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
+            im.save(save_path)
+
+        if self.check:
+            s = os.path.join(self.tmp_dir, '5_check_all_anchors')
+            os.makedirs(s, exist_ok=True)
+
+            for i in range(self.anchors.shape[0]):
+                x1, y1, x2, y2 = self.ret['target_in_resized_detection_x1y1x2y2']
+                im = self.ret['detection_cropped_resized'].copy()
+                draw = ImageDraw.Draw(im)
+                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
+
+                cx, cy, w, h = self.anchors[i]
+                x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h /2)
+                draw = ImageDraw.Draw(im)
+                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
+                save_path = os.path.join(s, 'img_{:04d}_anchor_{:05d}.jpg'.format(self.count, i))
+                im.save(save_path)
+
+        class_logits = class_target.reshape(-1, 1)
+        pos_neg_diff = np.hstack((class_logits, diff))
+        self.ret['pos_neg_diff'] = pos_neg_diff
+        return pos_neg_diff
+
 
 if __name__ == '__main__':
     a = TrainDataLoader('../dataset', check=True)
     a.get_img_pairs(0)
     a.pad_crop_resize()
+    a.generate_pos_neg_diff()
