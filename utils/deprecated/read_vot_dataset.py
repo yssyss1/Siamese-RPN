@@ -37,7 +37,7 @@ class VotDataset():
 
             if type(coordinates[0]) is str:
                 for idx in range(len(coordinates)):
-                    coordinates[idx] = self.string_float_to_int(coordinates[idx])
+                    coordinates[idx] = int(float((coordinates[idx])))
 
             box_list.append(coordinates)
         f.close()
@@ -76,14 +76,6 @@ class VotDataset():
         x[3] = x[1] + x[3]
 
         return x
-
-    def string_float_to_int(self, x):
-        """
-        VOT DATASET gt coordinates are string float type (ex '125.3')
-        int('125.3') => Casting Error
-        float('125.3') => 125.3 and then int(125.3) => 125
-        """
-        return int(float(x))
 
 
 if __name__ == '__main__':

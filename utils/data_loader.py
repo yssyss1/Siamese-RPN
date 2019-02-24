@@ -124,7 +124,9 @@ class Anchor():
         # return (1445, ) list - ground truth for each anchors whose length is (1445, )
         return diff
 
-    def pos_neg_anchor(self, gt, pos_num=16, neg_num=48, threshold_pos=0.5, threshold_neg=0.1):
+    def pos_neg_anchor(self, gt, pos_num=16, neg_num=48, threshold_pos=0.6, threshold_neg=0.3):
+        # TODO 일반적인 Fast-RCNN은 positive가 threshold를 못 넘겨서 16개가 안되는 경우 나머지는 negative로 채움
+        # TODO positive 중에서 threshold 넘기는 녀석이 전혀 없는 경우 IOU 최대인 것을 하나만 positive로 설정했었
         gt = gt.copy()
         gt_corner = self.center_to_corner(np.array(gt, dtype=np.float32).reshape(1, 4))
         an_corner = self.center_to_corner(np.array(self.anchors, dtype=np.float32))
@@ -139,6 +141,8 @@ class Anchor():
         # TODO Max에 대해서만 Threshold 검사하는건 좀 이상함...모든 positive는 전부 threshold 넘겨야하는거 아닌가?
         if max_iou > threshold_pos:
             pos[pos_idx] = 1
+        else:
+            raise NotImplementedError('Assign responsibility to Max IOU anchor')
 
         # negative
         neg_candidate = np.where(iou_value < threshold_neg)[0]
@@ -150,9 +154,10 @@ class Anchor():
 
 
 class TrainDataLoader(object):
-    def __init__(self, img_dir_path, out_feature=17, max_inter=80, check=False, tmp_dir='../tmp/visualization'):
+    def __init__(self, img_dir_path, score_size=17, max_inter=80, check=False, tmp_dir='../tmp/visualization'):
         assert os.path.isdir(img_dir_path), 'input img_dir_path error'
-        self.anchor_generator = Anchor(out_feature, out_feature)
+        self.anchor_generator = Anchor(score_size, score_size)
+        self.score_size = score_size
         self.img_dir_path = img_dir_path
         self.max_inter = max_inter
         self.sub_class_dir = [sub_class_dir for sub_class_dir in os.listdir(img_dir_path) if os.path.isdir(os.path.join(img_dir_path, sub_class_dir))]
@@ -169,6 +174,7 @@ class TrainDataLoader(object):
         """
         Normalize image range (-1, 1)
         """
+        img = np.array(img)
         return img / 127.5 - 1
 
     def _average(self):
@@ -444,7 +450,7 @@ class TrainDataLoader(object):
         pos, neg = self.anchor_generator.pos_neg_anchor(gt_box_in_detection)
         diff = self.anchor_generator.diff_anchor_gt(gt_box_in_detection)
         pos, neg, diff = pos.reshape((-1, 1)), neg.reshape((-1, 1)), diff.reshape((-1, 4))
-        class_target = np.array([-100.] * self.anchors.shape[0], np.int32)
+        class_target = np.zeros((self.anchors.shape[0], 2)).astype(np.float32)
 
         # positive anchor
         pos_index = np.where(pos == 1)[0]
@@ -452,12 +458,12 @@ class TrainDataLoader(object):
         self.ret['pos_anchors'] = np.array(self.ret['anchors'][pos_index, :],
                                            dtype=np.int32) if not pos_num == 0 else None
         if pos_num > 0:
-            class_target[pos_index] = 1
+            class_target[pos_index] = [1., 0.]
 
         # negative anchor
         neg_index = np.where(neg == 1)[0]
         neg_num = len(neg_index)
-        class_target[neg_index] = 0
+        class_target[neg_index] = [0., 1.]
 
         # draw pos and neg anchor box
         if self.check:
@@ -484,27 +490,43 @@ class TrainDataLoader(object):
             save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
             im.save(save_path)
 
-        if self.check:
-            s = os.path.join(self.tmp_dir, '5_check_all_anchors')
-            os.makedirs(s, exist_ok=True)
+        # if self.check:
+        #     s = os.path.join(self.tmp_dir, '5_check_all_anchors')
+        #     os.makedirs(s, exist_ok=True)
+        #
+        #     for i in range(self.anchors.shape[0]):
+        #         x1, y1, x2, y2 = self.ret['target_in_resized_detection_x1y1x2y2']
+        #         im = self.ret['detection_cropped_resized'].copy()
+        #         draw = ImageDraw.Draw(im)
+        #         draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
+        #
+        #         cx, cy, w, h = self.anchors[i]
+        #         x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h /2)
+        #         draw = ImageDraw.Draw(im)
+        #         draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
+        #         save_path = os.path.join(s, 'img_{:04d}_anchor_{:05d}.jpg'.format(self.count, i))
+        #         im.save(save_path)
 
-            for i in range(self.anchors.shape[0]):
-                x1, y1, x2, y2 = self.ret['target_in_resized_detection_x1y1x2y2']
-                im = self.ret['detection_cropped_resized'].copy()
-                draw = ImageDraw.Draw(im)
-                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
-
-                cx, cy, w, h = self.anchors[i]
-                x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h /2)
-                draw = ImageDraw.Draw(im)
-                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
-                save_path = os.path.join(s, 'img_{:04d}_anchor_{:05d}.jpg'.format(self.count, i))
-                im.save(save_path)
-
-        class_logits = class_target.reshape(-1, 1)
-        pos_neg_diff = np.hstack((class_logits, diff))
+        pos_neg_diff = np.hstack((class_target, diff))
         self.ret['pos_neg_diff'] = pos_neg_diff
         return pos_neg_diff
+
+    def get_data(self):
+        """
+        Return one batch data
+
+        template_image - (127, 127, 3)
+        detection_image - (255, 255, 3)
+        gt_objectness - (17, 17, 5, 2)
+        gt_regression - (17, 17, 5, 4)
+        """
+        template_image = self.normalize(self.ret['template_cropped_resized'].copy())
+        detection_image = self.normalize(self.ret['detection_cropped_resized'].copy())
+        pos_neg_diff = self.ret['pos_neg_diff']
+        gt_objectness = pos_neg_diff[:, :2].reshape(self.score_size, self.score_size, -1, 2)
+        gt_regression = pos_neg_diff[:, 2:].reshape(self.score_size, self.score_size, -1, 4)
+
+        return template_image, detection_image, (gt_objectness, gt_regression)
 
 
 if __name__ == '__main__':
@@ -512,3 +534,4 @@ if __name__ == '__main__':
     a.get_img_pairs(0)
     a.pad_crop_resize()
     a.generate_pos_neg_diff()
+    a.get_data()
