@@ -90,7 +90,7 @@ def dl_and_cut(vid, data, d_set_dir, pbar):
 
 
 # Parse the annotation csv file and schedule downloads and cuts
-def parse_and_sched(dl_dir='videos', num_threads=1):
+def parse_and_sched(dl_dir='videos', num_threads=12):
     """Download the entire youtube-bb data set into `dl_dir`.
     """
 

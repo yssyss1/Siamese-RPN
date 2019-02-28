@@ -22,6 +22,7 @@ def download_video_from_csv(csv_path, save_foler='./videos'):
             video_set.add(line.split(',')[0])
 
     for video_id in tqdm(video_set, desc='Download video from Youtube'):
+        print(video_id)
         download_youtube_mp4(video_id, save_foler)
 
 
