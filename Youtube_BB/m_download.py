@@ -3,20 +3,16 @@ from subprocess import check_call
 from concurrent import futures
 import youtube_dl
 import os
-import sys
 import cv2
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-# The data sets to be downloaded
 d_sets = ['yt_bb_detection_train', 'yt_bb_detection_validation']
 
-# Column names for detection CSV files
 col_names = ['youtube_id', 'timestamp_ms','class_id','class_name',
              'object_id','object_presence','xmin','xmax','ymin','ymax']
 
-# Host location of segment lists
 web_host = 'https://research.google.com/youtube-bb/'
 
 
@@ -25,7 +21,6 @@ def find_nearest_idx(array, value):
     return idx
 
 
-# Download and cut a clip to size
 def download_and_cut(vid, data, d_set_dir):
     video_save_path = os.path.join(d_set_dir, '{}_temp.mp4'.format(vid))
 
@@ -79,21 +74,20 @@ def download_and_cut(vid, data, d_set_dir):
     return vid
 
 
-def parse_and_sched(dl_dir='./videos', num_threads=12):
+def download_youtube_bb(dl_dir='./videos', num_threads=12):
     os.makedirs(dl_dir, exist_ok=True)
 
     for d_set in d_sets:
         d_set_dir = os.path.join(dl_dir, d_set)
         os.makedirs(os.path.join(d_set_dir), exist_ok=True)
 
-        print('Downloading annotations: {}'.format(d_set))
+        print('Downloading {} annotations'.format(d_set))
         check_call(['wget', web_host+d_set+'.csv.gz'])
 
-        print(d_set+': Unzipping annotations...')
+        print('Unzipping {} annotations'.format(d_set))
         check_call(['gzip', '-d', '-f', d_set+'.csv.gz'])
 
-        # Parse csv data using pandas
-        print('Parsing annotations into clip data: {}'.format(d_set))
+        print('Parsing {} annotations into clip data'.format(d_set))
         df = pd.DataFrame.from_csv(d_set+'.csv', header=None, index_col=False)
         df.columns = col_names
 
@@ -102,8 +96,8 @@ def parse_and_sched(dl_dir='./videos', num_threads=12):
         with futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
             [executor.submit(download_and_cut, vid, df[df['youtube_id'] == vid], d_set_dir) for vid in tqdm(vids)]
 
-        print('All videos downloaded: {}'.format(d_set))
+        print('All {} videos downloaded'.format(d_set))
 
 
 if __name__ == '__main__':
-    parse_and_sched()
+    download_youtube_bb()
