@@ -2,12 +2,15 @@
 # 1. change PIL to cv2 for speed
 # 2. remove redundant lines
 # 3. change variable names for readability
+# 4. function
 
-from PIL import Image, ImageOps, ImageStat, ImageDraw
+# from PIL import Image, ImageOps, ImageStat, ImageDraw
 import numpy as np
 import random
 import os
 import sys
+from utils.util import load_image, save_image
+import cv2
 
 
 class Anchor():
@@ -154,8 +157,7 @@ class Anchor():
 
 
 class TrainDataLoader(object):
-    def __init__(self, img_dir_path, score_size=17, max_inter=80, check=False, tmp_dir='../tmp/visualization'):
-        assert os.path.isdir(img_dir_path), 'input img_dir_path error'
+    def __init__(self, img_dir_path, score_size=17, max_inter=80, debug=False, tmp_dir='../tmp/visualization'):
         self.anchor_generator = Anchor(score_size, score_size)
         self.score_size = score_size
         self.img_dir_path = img_dir_path
@@ -163,12 +165,9 @@ class TrainDataLoader(object):
         self.sub_class_dir = [sub_class_dir for sub_class_dir in os.listdir(img_dir_path) if os.path.isdir(os.path.join(img_dir_path, sub_class_dir))]
         self.anchors = self.anchor_generator.gen_anchors()
         self.ret = {}
-        self.check = check
         os.makedirs(tmp_dir, exist_ok=True)
-        self.tmp_dir = tmp_dir
-        self.ret['tmp_dir'] = tmp_dir
-        self.ret['check'] = check
-        self.count = 0
+        self.debug_dir = tmp_dir
+        self.debug = debug
 
     def normalize(self, img):
         """
@@ -176,24 +175,6 @@ class TrainDataLoader(object):
         """
         img = np.array(img)
         return img / 127.5 - 1
-
-    def _average(self):
-        """
-        Compute template and detection images' each channel's mean
-        mean_template and mean_detection is tuple (ex (r_channel_mean, g_channel_mean, b_channel_mean))
-        """
-        if not self.ret.__contains__('template_img_path'):
-            raise Exception('template_img_path is not defined')
-        if not self.ret.__contains__('detection_img_path'):
-            raise Exception('detection_img_path is not defined')
-
-        template = Image.open(self.ret['template_img_path'])
-        detection = Image.open(self.ret['detection_img_path'])
-
-        mean_template = tuple(map(round, ImageStat.Stat(template).mean))
-        mean_detection = tuple(map(round, ImageStat.Stat(detection).mean))
-        self.ret['mean_template'] = mean_template
-        self.ret['mean_detection'] = mean_detection
 
     def get_img_pairs(self, idx):
         """
@@ -246,31 +227,28 @@ class TrainDataLoader(object):
         t1, t2 = self.ret['template_target_x1y1wh'], self.ret['detection_target_x1y1wh']
 
         # Coordinate transformation (left, top, width, height) => (center_x, center_y, width, height )
-        self.ret['template_target_xywh'] = np.array([t1[0] + t1[2] // 2, t1[1] + t1[3] // 2, t1[2], t1[3]], np.float32)
-        self.ret['detection_target_xywh'] = np.array([t2[0] + t2[2] // 2, t2[1] + t2[3] // 2, t2[2], t2[3]], np.float32)
+        self.ret['template_target_xywh'] = np.array([t1[0] + t1[2] // 2, t1[1] + t1[3] // 2, t1[2], t1[3]])
+        self.ret['detection_target_xywh'] = np.array([t2[0] + t2[2] // 2, t2[1] + t2[3] // 2, t2[2], t2[3]])
         self.ret['anchors'] = self.anchors
-        self._average()
 
-        if self.check:
-            s = os.path.join(self.tmp_dir, '0_check_bbox_groundtruth')
+        if self.debug:
+            s = os.path.join(self.debug_dir, '0_check_bbox_groundtruth')
             if not os.path.exists(s):
                 os.makedirs(s)
 
-            template = Image.open(self.ret['template_img_path'])
-            x, y, w, h = self.ret['template_target_xywh'].copy()
-            x1, y1, x3, y3 = int(x-w//2), int(y-h//2), int(x+w//2), int(y+h//2)
-            draw = ImageDraw.Draw(template)
-            draw.line([(x1, y1), (x3, y1), (x3, y3), (x1, y3), (x1, y1)], width=1, fill='red')
-            save_path = os.path.join(s,'idx_{:04d}_class_{}_template_idx_{}.jpg'.format(self.count, frames_basename, template_index))
-            template.save(save_path)
+            debug_image = load_image(self.ret['template_img_path'])
+            x, y, w, h = self.ret['template_target_xywh']
+            x1, y1, x2, y2 = x-w//2, y-h//2, x+w//2, y+h//2
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
+            save_path = os.path.join(s,'{}.jpg'.format('template_image_with_target'))
+            save_image(debug_image, save_path)
 
-            detection = Image.open(self.ret['detection_img_path'])
-            x, y, w, h = self.ret['detection_target_xywh'].copy()
-            x1, y1, x3, y3 = int(x-w//2), int(y-h//2), int(x+w//2), int(y+h//2)
-            draw = ImageDraw.Draw(detection)
-            draw.line([(x1, y1), (x3, y1), (x3, y3), (x1, y3), (x1, y1)], width=1, fill='red')
-            save_path = os.path.join(s,'idx_{:04d}_class_{}_detection_idx_{}.jpg'.format(self.count, frames_basename, detection_index))
-            detection.save(save_path)
+            debug_image = load_image(self.ret['detection_img_path'])
+            x, y, w, h = self.ret['detection_target_xywh']
+            x1, y1, x2, y2 = x-w//2, y-h//2, x+w//2, y+h//2
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
+            save_path = os.path.join(s,'{}.jpg'.format('detection_image_with_target'))
+            save_image(debug_image, save_path)
 
     def pad_crop_resize(self):
         """
@@ -280,16 +258,16 @@ class TrainDataLoader(object):
 
         Images are padded with channel mean
         """
-        template_img = Image.open(self.ret['template_img_path'])
-        detection_img = Image.open(self.ret['detection_img_path'])
+        template_img = load_image(self.ret['template_img_path'])
+        detection_img = load_image(self.ret['detection_img_path'])
 
-        template_origin_width, template_origin_height = template_img.size
-        detection_origin_width, detection_origin_height = detection_img.size
+        template_origin_height, template_origin_width, _ = template_img.shape
+        detection_origin_height, detection_origin_width, _ = detection_img.shape
 
         template_target_cx, template_target_cy, template_target_w, template_target_h = self.ret['template_target_xywh']
         detecion_target_cx, detecion_target_cy, detecion_target_w, detecion_target_h = self.ret['detection_target_xywh']
 
-        p = round((template_target_w + template_target_h) / 2)
+        p = (template_target_w + template_target_h) // 2
         template_square_size = int(np.sqrt((template_target_w + p) * (template_target_h + p)))
         detection_square_size = int(template_square_size * 2)
 
@@ -312,8 +290,6 @@ class TrainDataLoader(object):
         template_bottom_padding = template_target_bottom - template_origin_height \
             if template_target_bottom > template_origin_height else 0
 
-        template_padding = tuple(map(int, [template_left_padding, template_top_padding,
-                                           template_right_padding, template_bottom_padding]))
         new_template_width = template_left_padding + template_origin_width + template_right_padding
         new_template_height = template_top_padding + template_origin_height + template_bottom_padding
 
@@ -325,39 +301,50 @@ class TrainDataLoader(object):
         detection_bottom_padding = detection_target_bottom - detection_origin_height \
             if detection_target_bottom > detection_origin_height else 0
 
-        detection_padding = tuple(map(int, [detection_left_padding, detection_top_padding,
-                                            detection_right_padding, detection_bottom_padding]))
         new_detection_width = detection_left_padding + detection_origin_width + detection_right_padding
         new_detection_height = detection_top_padding + detection_origin_height + detection_bottom_padding
 
-        # save padding information
-        self.ret['padding'] = detection_padding
-        self.ret['new_template_img_padding_size'] = (new_detection_width, new_detection_height)
+        if any([detection_left_padding, detection_top_padding, detection_right_padding, detection_bottom_padding]):
+            img_mean = tuple(map(int, detection_img.mean(axis=(0, 1))))
+            detection_with_padding = np.zeros((new_detection_height, new_detection_width, 3))
+            detection_with_padding[detection_top_padding:detection_top_padding + detection_origin_height, detection_left_padding:detection_left_padding + detection_origin_width, :] = detection_img
+            if detection_top_padding:
+                detection_with_padding[0:detection_top_padding, detection_left_padding:detection_left_padding + detection_origin_width, :] = img_mean
+            if detection_bottom_padding:
+                detection_with_padding[detection_origin_height + detection_top_padding:, detection_left_padding:detection_left_padding + detection_origin_width, :] = img_mean
+            if detection_left_padding:
+                detection_with_padding[:, 0:detection_left_padding, :] = img_mean
+            if detection_right_padding:
+                detection_with_padding[:, detection_origin_width + detection_left_padding:, :] = img_mean
+            self.ret['new_detection_img_padding'] = detection_with_padding
+        else:
+            self.ret['new_detection_img_padding'] = detection_img
 
-        # TODO Change this line with cv2 for fast preprocessing
-        self.ret['new_template_img_padding'] = ImageOps.expand(template_img, border=template_padding,
-                                                               fill=self.ret['mean_template'])
-        self.ret['new_detection_img_padding'] = ImageOps.expand(detection_img, border=detection_padding,
-                                                                fill=self.ret['mean_detection'])
+        if any([template_left_padding, template_top_padding, template_right_padding, template_bottom_padding]):
+            img_mean = tuple(map(int, template_img.mean(axis=(0, 1))))
+            template_with_padding = np.zeros((new_template_height, new_template_width, 3), np.uint8)
+            template_with_padding[template_top_padding:template_top_padding + template_origin_height, template_left_padding:template_left_padding + template_origin_width, :] = template_img
+            if template_top_padding:
+                template_with_padding[0:template_top_padding, template_left_padding:template_left_padding + template_origin_width, :] = img_mean
+            if template_bottom_padding:
+                template_with_padding[template_origin_height + template_top_padding:, template_left_padding:template_left_padding + template_origin_width, :] = img_mean
+            if template_left_padding:
+                template_with_padding[:, 0:template_left_padding, :] = img_mean
+            if template_right_padding:
+                template_with_padding[:, template_origin_width + template_left_padding:, :] = img_mean
+            self.ret['new_template_img_padding'] = template_with_padding
+        else:
+            self.ret['new_template_img_padding'] = template_img
 
         # crop
-        tl = template_target_cx + template_left_padding - template_square_size // 2
-        tt = template_target_cy + template_top_padding - template_square_size // 2
-        # tr, tb is distance from right and bottom ( not from origin point )
-        tr = new_template_width - tl - template_square_size
-        tb = new_template_height - tt - template_square_size
-        self.ret['template_cropped'] = ImageOps.crop(self.ret['new_template_img_padding'].copy(), (tl, tt, tr, tb))
+        tl = int(template_target_cx + template_left_padding - template_square_size // 2)
+        tt = int(template_target_cy + template_top_padding - template_square_size // 2)
+        self.ret['template_cropped'] = self.ret['new_template_img_padding'][tt:tt+template_square_size, tl:tl+template_square_size, :]
 
-        dl = detecion_target_cx + detection_left_padding - detection_square_size // 2
-        dt = detecion_target_cy + detection_top_padding - detection_square_size // 2
-        dr = new_detection_width - dl - detection_square_size
-        db = new_detection_height - dt - detection_square_size
-        self.ret['detection_cropped'] = ImageOps.crop(self.ret['new_detection_img_padding'].copy(), (dl, dt, dr, db))
+        dl = int(detecion_target_cx + detection_left_padding - detection_square_size // 2)
+        dt = int(detecion_target_cy + detection_top_padding - detection_square_size // 2)
+        self.ret['detection_cropped'] = self.ret['new_detection_img_padding'][dt:dt+detection_square_size, dl:dl+detection_square_size, :]
 
-        self.ret['detection_tlcords_of_original_image'] = (
-            detecion_target_cx - detection_square_size // 2,
-            detecion_target_cy - detection_square_size // 2
-        )
         self.ret['detection_tlcords_of_padding_image'] = (
             detecion_target_cx - detection_square_size // 2 + detection_left_padding,
             detecion_target_cy - detection_square_size // 2 + detection_top_padding
@@ -368,36 +355,34 @@ class TrainDataLoader(object):
         )
 
         # resize
-        self.ret['template_cropped_resized'] = self.ret['template_cropped'].copy().resize((127, 127))
-        self.ret['detection_cropped_resized'] = self.ret['detection_cropped'].copy().resize((255, 255))
-        self.ret['template_cropprd_resized_ratio'] = round(127. / template_square_size, 2)
+        self.ret['template_cropped_resized'] = cv2.resize(self.ret['template_cropped'], (127, 127))
+        self.ret['detection_cropped_resized'] = cv2.resize(self.ret['detection_cropped'], (255, 255))
         self.ret['detection_cropped_resized_ratio'] = round(255. / detection_square_size, 2)
 
         self.ret['target_tlcords_of_padding_image'] = np.array(
-            [int(detecion_target_cx + detection_left_padding - detecion_target_w // 2),
-             int(detecion_target_cy + detection_top_padding - detecion_target_h // 2)
-             ], dtype=np.float32)
+            [detecion_target_cx + detection_left_padding - detecion_target_w // 2,
+             detecion_target_cy + detection_top_padding - detecion_target_h // 2
+             ])
         self.ret['target_rbcords_of_padding_image'] = np.array(
-            [int(detecion_target_cx + detection_left_padding + detecion_target_w // 2),
-             int(detecion_target_cy + detection_top_padding + detecion_target_h // 2)
-             ], dtype=np.float32)
+            [detecion_target_cx + detection_left_padding + detecion_target_w // 2,
+             detecion_target_cy + detection_top_padding + detecion_target_h // 2
+             ])
 
-        if self.check:
-            s = os.path.join(self.tmp_dir, '1_check_detection_target_in_padding')
+        if self.debug:
+            s = os.path.join(self.debug_dir, '1_check_detection_target_in_padding')
             os.makedirs(s, exist_ok=True)
 
-            im = self.ret['new_detection_img_padding']
-            draw = ImageDraw.Draw(im)
+            debug_image = self.ret['new_detection_img_padding']
             x1, y1 = self.ret['target_tlcords_of_padding_image']
             x2, y2 = self.ret['target_rbcords_of_padding_image']
-            draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')  # target in padding
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
 
             x1, y1 = self.ret['detection_tlcords_of_padding_image']
             x2, y2 = self.ret['detection_rbcords_of_padding_image']
-            draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')  # detection in padding
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (0, 255, 0), 1)
 
-            save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
-            im.save(save_path)
+            save_path = os.path.join(s, '{}.jpg'.format('target_detection_area_in_padding_detection'))
+            save_image(debug_image, save_path)
 
         x11, y11 = self.ret['detection_tlcords_of_padding_image']
         x12, y12 = self.ret['detection_rbcords_of_padding_image']
@@ -405,48 +390,45 @@ class TrainDataLoader(object):
         x22, y22 = self.ret['target_rbcords_of_padding_image']
 
         # Caculate target's relative coordinate with respect to padded detection image
-        x1_of_d, y1_of_d, x3_of_d, y3_of_d = int(x21 - x11), int(y21 - y11), int(x22 - x11), int(y22 - y11)
-        x1 = np.clip(x1_of_d, 0, x12 - x11).astype(np.float32)
-        y1 = np.clip(y1_of_d, 0, y12 - y11).astype(np.float32)
-        x2 = np.clip(x3_of_d, 0, x12 - x11).astype(np.float32)
-        y2 = np.clip(y3_of_d, 0, y12 - y11).astype(np.float32)
-        self.ret['target_in_detection_x1y1x2y2'] = np.array([x1, y1, x2, y2], dtype=np.float32)
+        x1_of_d, y1_of_d, x3_of_d, y3_of_d = x21 - x11, y21 - y11, x22 - x11, y22 - y11
+        x1 = np.clip(x1_of_d, 0, x12 - x11)
+        y1 = np.clip(y1_of_d, 0, y12 - y11)
+        x2 = np.clip(x3_of_d, 0, x12 - x11)
+        y2 = np.clip(y3_of_d, 0, y12 - y11)
 
-        if self.check:
-            s = os.path.join(self.tmp_dir, '2_check_target_in_cropped_detection')
+        if self.debug:
+            s = os.path.join(self.debug_dir, '2_check_target_in_cropped_detection')
             os.makedirs(s, exist_ok=True)
 
-            im = self.ret['detection_cropped'].copy()
-            draw = ImageDraw.Draw(im)
-            draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
-            save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
-            im.save(save_path)
+            debug_image = self.ret['detection_cropped'].copy()
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
+            save_path = os.path.join(s, '{}.jpg'.format('target_in_cropped_detection'))
+            save_image(debug_image, save_path)
 
-        cords_in_cropped_detection = np.array((x1, y1, x2, y2), dtype=np.float32)
+        cords_in_cropped_detection = np.array([x1, y1, x2, y2])
         cords_in_cropped_resized_detection = (cords_in_cropped_detection * self.ret['detection_cropped_resized_ratio']).astype(np.int32)
 
         x1, y1, x2, y2 = cords_in_cropped_resized_detection
         cx, cy, w, h = (x1 + x2) // 2, (y1 + y2) // 2, x2 - x1, y2 - y1
-        self.ret['target_in_resized_detection_x1y1x2y2'] = np.array((x1, y1, x2, y2), dtype=np.int32)
-        self.ret['target_in_resized_detection_xywh'] = np.array((cx, cy, w, h), dtype=np.int32)
+        self.ret['target_in_resized_detection_x1y1x2y2'] = cords_in_cropped_resized_detection
+        self.ret['target_in_resized_detection_xywh'] = np.array([cx, cy, w, h])
         self.ret['area_target_in_resized_detection'] = w * h
 
-        if self.check:
-            s = os.path.join(self.tmp_dir, '3_check_target_in_cropped_resized_detection')
+        if self.debug:
+            s = os.path.join(self.debug_dir, '3_check_target_in_cropped_resized_detection')
             os.makedirs(s, exist_ok=True)
 
-            im = self.ret['detection_cropped_resized'].copy()
-            draw = ImageDraw.Draw(im)
-            draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
-            save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
-            im.save(save_path)
+            debug_image = self.ret['detection_cropped_resized'].copy()
+            cv2.rectangle(debug_image, (x1, y1), (x2, y2), (255, 0, 0), 1)
+            save_path = os.path.join(s, '{}.jpg'.format('target_in_croppedd_resized_detection'))
+            save_image(debug_image, save_path)
 
     def generate_pos_neg_diff(self):
         """
         Decide positive and negative responsibility and generate ground truth for box regression
         Anchors which has an responsibility for ground truth will be optimised to fit ground truth
         """
-        gt_box_in_detection = self.ret['target_in_resized_detection_xywh'].copy()
+        gt_box_in_detection = self.ret['target_in_resized_detection_xywh']
         pos, neg = self.anchor_generator.pos_neg_anchor(gt_box_in_detection)
         diff = self.anchor_generator.diff_anchor_gt(gt_box_in_detection)
         pos, neg, diff = pos.reshape((-1, 1)), neg.reshape((-1, 1)), diff.reshape((-1, 4))
@@ -455,8 +437,6 @@ class TrainDataLoader(object):
         # positive anchor
         pos_index = np.where(pos == 1)[0]
         pos_num = len(pos_index)
-        self.ret['pos_anchors'] = np.array(self.ret['anchors'][pos_index, :],
-                                           dtype=np.int32) if not pos_num == 0 else None
         if pos_num > 0:
             class_target[pos_index] = [1., 0.]
 
@@ -466,12 +446,11 @@ class TrainDataLoader(object):
         class_target[neg_index] = [0., 1.]
 
         # draw pos and neg anchor box
-        if self.check:
-            s = os.path.join(self.tmp_dir, '4_check_pos_neg_anchors')
+        if self.debug:
+            s = os.path.join(self.debug_dir, '4_check_pos_neg_anchors')
             os.makedirs(s, exist_ok=True)
 
-            im = self.ret['detection_cropped_resized'].copy()
-            draw = ImageDraw.Draw(im)
+            debug_img = self.ret['detection_cropped_resized'].copy()
             if pos_num == 16:
                 for i in range(pos_num):
                     index = pos_index[i]
@@ -480,32 +459,31 @@ class TrainDataLoader(object):
                         print('anchor area error')
                         sys.exit(0)
                     x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
-                    draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
+                    cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
 
             for i in range(neg_num):
                 index = neg_index[i]
                 cx, cy, w, h = self.anchors[index]
                 x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
-                draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
-            save_path = os.path.join(s, '{:04d}.jpg'.format(self.count))
-            im.save(save_path)
+                cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
+            save_path = os.path.join(s, '{}.jpg'.format('pos_neg_anchor'))
+            save_image(debug_img, save_path)
 
-        # if self.check:
-        #     s = os.path.join(self.tmp_dir, '5_check_all_anchors')
-        #     os.makedirs(s, exist_ok=True)
-        #
-        #     for i in range(self.anchors.shape[0]):
-        #         x1, y1, x2, y2 = self.ret['target_in_resized_detection_x1y1x2y2']
-        #         im = self.ret['detection_cropped_resized'].copy()
-        #         draw = ImageDraw.Draw(im)
-        #         draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='red')
-        #
-        #         cx, cy, w, h = self.anchors[i]
-        #         x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h /2)
-        #         draw = ImageDraw.Draw(im)
-        #         draw.line([(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)], width=1, fill='green')
-        #         save_path = os.path.join(s, 'img_{:04d}_anchor_{:05d}.jpg'.format(self.count, i))
-        #         im.save(save_path)
+        if self.debug:
+            s = os.path.join(self.debug_dir, '5_check_all_anchors')
+            os.makedirs(s, exist_ok=True)
+
+            x1, y1, x2, y2 = self.ret['target_in_resized_detection_x1y1x2y2']
+            debug_img = self.ret['detection_cropped_resized'].copy()
+            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
+
+            for i in range(self.anchors.shape[0]):
+                cx, cy, w, h = self.anchors[i]
+                x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h /2)
+                cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
+
+            save_path = os.path.join(s, '{}.jpg'.format('all_anchors_and_target'))
+            save_image(debug_img, save_path)
 
         pos_neg_diff = np.hstack((class_target, diff))
         self.ret['pos_neg_diff'] = pos_neg_diff
@@ -530,7 +508,7 @@ class TrainDataLoader(object):
 
 
 if __name__ == '__main__':
-    a = TrainDataLoader('../dataset', check=True)
+    a = TrainDataLoader('../dataset', debug=True)
     a.get_img_pairs(0)
     a.pad_crop_resize()
     a.generate_pos_neg_diff()
