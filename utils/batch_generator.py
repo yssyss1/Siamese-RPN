@@ -8,6 +8,7 @@ import cv2
 import random
 from utils.anchor import Anchor
 from config import Config
+from tqdm import tqdm
 
 
 class BatchGenerator(Sequence):
@@ -42,7 +43,8 @@ class BatchGenerator(Sequence):
         gt_box_batch = []
 
         for folder_path in self.image_path[l_bound:r_bound]:
-            video_id, object_id = folder_path.split('/')[-1].split('_')
+            folder_name = folder_path.split('/')[-1]
+            video_id, object_id = folder_name[:-2], folder_name[-1]
             object_id = int(float(object_id))
             video_labels = self.labels[self.labels['video_id'] == video_id]
             video_id_labels = video_labels[video_labels['object_id'] == object_id]
@@ -50,7 +52,10 @@ class BatchGenerator(Sequence):
             labels = video_id_labels.values
 
             data_num = len(labels)
-            template_idx = random.choice(range(data_num))
+            try :
+                template_idx = random.choice(range(data_num))
+            except:
+                print('{} and {} and {} and {}'.format(folder_name, video_id, object_id, data_num))
 
             lower_bound = np.clip(template_idx - self.select_range, 0, data_num - 1)
             upper_bound = np.clip(template_idx + self.select_range, 0, data_num - 1)
@@ -78,7 +83,8 @@ class BatchGenerator(Sequence):
             t_img, d_img, gt_object, gt_box = self.preprocessing(template_image,
                                                                  detection_image,
                                                                  template_gt_center,
-                                                                 detection_gt_center)
+                                                                 detection_gt_center,
+                                                                 (template_image_path, detection_image_path))
             template_img_batch.append(t_img)
             detection_img_batch.append(d_img)
             gt_object_batch.append(gt_object)
@@ -86,7 +92,7 @@ class BatchGenerator(Sequence):
 
         return np.array(template_img_batch), np.array(detection_img_batch), np.array(gt_object_batch), np.array(gt_box_batch)
 
-    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center):
+    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center, temp):
         template_origin_height, template_origin_width, _ = template_img.shape
         detection_origin_height, detection_origin_width, _ = detection_img.shape
 
@@ -180,7 +186,10 @@ class BatchGenerator(Sequence):
         )
 
         # resize
-        template_cropped_resized = cv2.resize(template_cropped, (127, 127))
+        try:
+            template_cropped_resized = cv2.resize(template_cropped, (127, 127))
+        except:
+            print('{} and {}'.format(template_cropped.shape, temp))
         detection_cropped_resized = cv2.resize(detection_cropped, (255, 255))
         detection_cropped_resized_ratio = round(255. / detection_square_size, 2)
 

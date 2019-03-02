@@ -21,9 +21,9 @@ class SiameseRPN:
         detection = Input(shape=detection_shape)
 
         template_feature = self.feature_extraction(template)
-        detection_cls_feature = Conv2D(256, kernel_size=3, name='RPN_Detection_Conv')(
+        detection_cls_feature = Conv2D(256, kernel_size=3, name='RPN_Detection_Conv_CLS')(
             self.feature_extraction(detection))
-        detection_reg_feature = Conv2D(256, kernel_size=3, name='RPN_Detection_Conv')(
+        detection_reg_feature = Conv2D(256, kernel_size=3, name='RPN_Detection_Conv_REG')(
             self.feature_extraction(detection))
 
         template_cls_feature = Conv2D(filters=2 * self.anchor_num * 256, kernel_size=3,
