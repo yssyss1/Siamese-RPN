@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-d_sets = ['yt_bb_detection_train', 'yt_bb_detection_validation']
+d_sets = ['yt_bb_detection_validation', 'yt_bb_detection_train']
 
 col_names = ['youtube_id', 'timestamp_ms','class_id','class_name',
              'object_id','object_presence','xmin','xmax','ymin','ymax']
@@ -81,14 +81,14 @@ def download_youtube_bb(dl_dir='./videos', num_threads=12):
         d_set_dir = os.path.join(dl_dir, d_set)
         os.makedirs(os.path.join(d_set_dir), exist_ok=True)
 
-        print('Downloading {} annotations'.format(d_set))
-        check_call(['wget', web_host+d_set+'.csv.gz'])
-
-        print('Unzipping {} annotations'.format(d_set))
-        check_call(['gzip', '-d', '-f', d_set+'.csv.gz'])
+        # print('Downloading {} annotations'.format(d_set))
+        # check_call(['wget', web_host+d_set+'.csv.gz'])
+        #
+        # print('Unzipping {} annotations'.format(d_set))
+        # check_call(['gzip', '-d', '-f', d_set+'.csv.gz'])
 
         print('Parsing {} annotations into clip data'.format(d_set))
-        df = pd.DataFrame.from_csv(d_set+'.csv', header=None, index_col=False)
+        df = pd.read_csv(d_set+'.csv', header=None, index_col=False)
         df.columns = col_names
 
         vids = df['youtube_id'].unique()
