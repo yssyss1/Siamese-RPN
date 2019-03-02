@@ -4,10 +4,10 @@ from config import Config
 
 
 def rpn_loss(y_true, y_pred):
-    class_prediction = y_pred[0]
-    class_gt = y_true[0]
-    coord_prediction = y_pred[1]
-    coord_gt = y_true[1]
+    class_prediction = y_pred[..., :2]
+    class_gt = y_true[..., :2]
+    coord_prediction = y_pred[..., 2:]
+    coord_gt = y_true[..., 2:]
 
     """ Class loss """
     objectness = tf.argmax(class_gt[..., :2], -1)
@@ -34,11 +34,9 @@ def rpn_loss(y_true, y_pred):
 
 
 if __name__ == '__main__':
-    a = np.ones((1, 17, 17, 5, 2)).astype(np.float32)
-    b = np.ones((1, 17, 17, 5, 4)).astype(np.float32)
-    c = np.ones((1, 17, 17, 5, 2)).astype(np.float32)
-    d = np.ones((1, 17, 17, 5, 4)).astype(np.float32)
+    a = np.ones((2, 17, 17, 5, 6)).astype(np.float32)
+    b = np.ones((2, 17, 17, 5, 6)).astype(np.float32)
 
-    rpn_loss([a, b], [c, d])
+    rpn_loss(a, b)
 
 

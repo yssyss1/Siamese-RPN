@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 import pandas as pd
 import os
-from utils.util import is_exist, load_image, corner_to_center, normalize
+from utils.util import is_exist, load_image, corner_to_center, normalize, save_image
 import cv2
 import random
 from utils.anchor import Anchor
@@ -52,10 +52,7 @@ class BatchGenerator(Sequence):
             labels = video_id_labels.values
 
             data_num = len(labels)
-            try :
-                template_idx = random.choice(range(data_num))
-            except:
-                print('{} and {} and {} and {}'.format(folder_name, video_id, object_id, data_num))
+            template_idx = random.choice(range(data_num))
 
             lower_bound = np.clip(template_idx - self.select_range, 0, data_num - 1)
             upper_bound = np.clip(template_idx + self.select_range, 0, data_num - 1)
@@ -68,7 +65,6 @@ class BatchGenerator(Sequence):
                                                            template_info[4])
             detection_image_path = '{}_{}_{}_{}.jpg'.format(detection_info[0], detection_info[1], detection_info[2],
                                                            detection_info[4])
-
             template_image = load_image(os.path.join(folder_path, template_image_path))
             detection_image = load_image(os.path.join(folder_path, detection_image_path))
             height, width, _ = template_image.shape
@@ -83,16 +79,17 @@ class BatchGenerator(Sequence):
             t_img, d_img, gt_object, gt_box = self.preprocessing(template_image,
                                                                  detection_image,
                                                                  template_gt_center,
-                                                                 detection_gt_center,
-                                                                 (template_image_path, detection_image_path))
+                                                                 detection_gt_center
+                                                                 )
             template_img_batch.append(t_img)
             detection_img_batch.append(d_img)
             gt_object_batch.append(gt_object)
             gt_box_batch.append(gt_box)
 
-        return np.array(template_img_batch), np.array(detection_img_batch), np.array(gt_object_batch), np.array(gt_box_batch)
+        gt = np.concatenate((gt_object_batch, gt_box_batch), axis=-1)
+        return [np.array(template_img_batch), np.array(detection_img_batch)], gt
 
-    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center, temp):
+    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center):
         template_origin_height, template_origin_width, _ = template_img.shape
         detection_origin_height, detection_origin_width, _ = detection_img.shape
 
@@ -184,12 +181,8 @@ class BatchGenerator(Sequence):
             detecion_target_cx + detection_square_size // 2 + detection_left_padding,
             detecion_target_cy + detection_square_size // 2 + detection_top_padding
         )
-
         # resize
-        try:
-            template_cropped_resized = cv2.resize(template_cropped, (127, 127))
-        except:
-            print('{} and {}'.format(template_cropped.shape, temp))
+        template_cropped_resized = cv2.resize(template_cropped, (127, 127))
         detection_cropped_resized = cv2.resize(detection_cropped, (255, 255))
         detection_cropped_resized_ratio = round(255. / detection_square_size, 2)
 
@@ -236,13 +229,30 @@ class BatchGenerator(Sequence):
         # negative anchor
         neg_index = np.where(neg == 1)[0]
         class_target[neg_index] = [0., 1.]
+        neg_num = len(neg_index)
+
+        # draw pos and neg anchor box
+        # debug_img = detection_cropped_resized.copy()
+        # for i in range(pos_num):
+        #     index = pos_index[i]
+        #     cx, cy, w, h = self.anchor.get_anchors()[index]
+        #     x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+        #     cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
+        #
+        # for i in range(neg_num):
+        #     index = neg_index[i]
+        #     cx, cy, w, h = self.anchor.get_anchors()[index]
+        #     x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+        #     cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
+        # save_path = os.path.join('./{}.jpg'.format('pos_neg_anchor'))
+        # save_image(debug_img, save_path)
 
         pos_neg_diff = np.hstack((class_target, diff))
 
         template_image = normalize(template_cropped_resized)
         detection_image = normalize(detection_cropped_resized)
-        gt_objectness = pos_neg_diff[:, :2].reshape(self.score_size, self.score_size, -1, 2)
-        gt_regression = pos_neg_diff[:, 2:].reshape(self.score_size, self.score_size, -1, 4)
+        gt_objectness = pos_neg_diff[:, :2].reshape(self.score_size, self.score_size, -1)
+        gt_regression = pos_neg_diff[:, 2:].reshape(self.score_size, self.score_size, -1)
 
         return template_image, detection_image, gt_objectness, gt_regression
 
@@ -256,6 +266,7 @@ class BatchGenerator(Sequence):
         labels = pd.read_csv(csv_path, header=None, index_col=False)
         labels.columns = col_names
         labels = labels.drop(labels[labels['object_presence'] == 'absent'].index)
+        labels = labels.drop(labels[labels['object_presence'] == 'uncertain'].index)
         return labels
 
 

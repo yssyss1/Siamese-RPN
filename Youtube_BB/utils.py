@@ -73,7 +73,8 @@ def remove_no_object_folder(folder_path, csv_path):
         label_num = len(video_id_labels)
 
         no_object_label = video_id_labels[video_id_labels['object_presence'] == 'absent']
-        no_object_label_num = len(no_object_label)
+        uncertain_label = video_id_labels[video_id_labels['object_presence'] == 'uncertain']
+        no_object_label_num = len(no_object_label) + len(uncertain_label)
 
         if no_object_label_num == label_num:
             shutil.rmtree(foler_full_path)

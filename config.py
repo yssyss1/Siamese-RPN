@@ -9,7 +9,7 @@ class Config:
     loss_lamda = 1.0
     train_image_path = './data/image'
     train_csv_path = './data/csv/yt_bb_detection_validation.csv'
-    batch_size = 32
+    batch_size = 1
     frame_select_range = 100
 
 
