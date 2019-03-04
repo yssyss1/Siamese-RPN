@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-class Histories(Callback):
+class PlotLossGraph(Callback):
     def __init__(self, model, val_gen):
         self.model = model
         self.val_gen = val_gen
@@ -51,7 +51,7 @@ def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_pat
                         verbose=1,
                         validation_data=val_generator,
                         validation_steps=len(val_generator),
-                        callbacks=[checkpoint, reduce_lr, Histories(model, val_generator)],
+                        callbacks=[checkpoint, reduce_lr, PlotLossGraph(model, val_generator)],
                         shuffle=False)
 
 
