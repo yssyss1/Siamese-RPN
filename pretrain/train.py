@@ -8,6 +8,7 @@ import os
 
 class PlotLossGraph(Callback):
     def __init__(self, model, val_gen):
+        super(Callback, self).__init__()
         self.model = model
         self.val_gen = val_gen
         self.losses = []
