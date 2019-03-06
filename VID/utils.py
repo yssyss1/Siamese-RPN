@@ -14,16 +14,26 @@ def xml_to_csv(root_dir):
     ann_dir = os.path.join(root_dir, 'Annotations')
     data_dir = os.path.join(root_dir, 'Data')
 
-    for dataset in ['train', 'val']:
+    for dataset in ['val']:
         ann_dir_dataset_path = os.path.join(ann_dir, dataset)
         video_sets = os.listdir(ann_dir_dataset_path)
 
-        for video_set in video_sets:
-            videos = os.listdir(os.path.join(ann_dir_dataset_path, video_set))
-            video_sets_ann_path = os.path.join(ann_dir_dataset_path, video_set)
+        if dataset == 'train':
+            for video_set in video_sets:
+                videos = os.listdir(os.path.join(ann_dir_dataset_path, video_set))
+                video_sets_ann_path = os.path.join(ann_dir_dataset_path, video_set)
 
-            for video in videos:
-                video_ann_path = os.path.join(video_sets_ann_path, video)
+                for video in videos:
+                    video_ann_path = os.path.join(video_sets_ann_path, video)
+                    xmls = glob(os.path.join(video_ann_path, '*.xml'))
+
+                    for xml in xmls:
+                        xml_path = xml
+                        data_path = xml.replace('Annotations', 'Data').replace('.xml', '.JPEG')
+                        values = read_xml(xml_path)
+        else:
+            for video in video_sets:
+                video_ann_path = os.path.join(ann_dir_dataset_path, video)
                 xmls = glob(os.path.join(video_ann_path, '*.xml'))
 
                 for xml in xmls:
@@ -54,7 +64,6 @@ def read_xml(xml_path):
             object['ymin'] = int(elem.text)
 
     values['bndbox'] = object
-    print(values)
 
 
 xml_to_csv('/home/seok/VID')
