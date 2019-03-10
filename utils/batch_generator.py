@@ -42,17 +42,19 @@ class BatchGenerator(Sequence):
         gt_object_batch = []
         gt_box_batch = []
 
-        for folder_path in self.image_path[l_bound:r_bound]:
+        for folder_path in tqdm(self.image_path[l_bound:r_bound]):
             folder_name = folder_path.split('/')[-1]
 
             object_id = folder_name.split('_')[-1]
             video_id = folder_name[:-(len(object_id) + 1)]
             object_id = int(float(object_id))
 
-            video_labels = self.labels[self.labels['video_id'] == video_id]
-            video_id_labels = video_labels[video_labels['object_id'] == object_id]
+            labels = self.labels.get_group((video_id, object_id)).values
 
-            labels = video_id_labels.values
+            # video_labels = self.labels[self.labels['video_id'] == video_id]
+            # video_id_labels = video_labels[video_labels['object_id'] == object_id]
+            #
+            # labels = video_id_labels.values
 
             data_num = len(labels)
             template_idx = random.choice(range(data_num))
@@ -271,7 +273,10 @@ class BatchGenerator(Sequence):
         labels.columns = col_names
         labels = labels.drop(labels[labels['object_presence'] == 'absent'].index)
         labels = labels.drop(labels[labels['object_presence'] == 'uncertain'].index)
-        return labels
+
+        g_labels = labels.groupby([labels.video_id, labels.object_id])
+
+        return g_labels
 
 
 if __name__ == '__main__':

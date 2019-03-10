@@ -18,13 +18,22 @@ def train():
     model = SiameseRPN().build_model()
     model.compile(optimizer=SGD(lr=Config.lr), loss=rpn_loss)
     train_data_generator = BatchGenerator(Config.train_image_path,
-                                          Config.train_csv_path,
+                                          Config.csv_path,
+                                          Config.batch_size,
+                                          Config.frame_select_range,
+                                          True)
+
+    val_data_generator = BatchGenerator(Config.val_image_path,
+                                          Config.csv_path,
                                           Config.batch_size,
                                           Config.frame_select_range,
                                           False)
+
     model.fit_generator(generator=train_data_generator,
                         steps_per_epoch=len(train_data_generator),
                         epochs=Config.epoch,
+                        validation_data=val_data_generator,
+                        validation_steps=len(val_data_generator),
                         verbose=1,
                         shuffle=False
                         )
