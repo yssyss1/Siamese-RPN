@@ -36,7 +36,7 @@ class BatchGenerator(Sequence):
                                iaa.OneOf([
                                    iaa.GaussianBlur((0, 1.0)),
                                    iaa.AverageBlur(k=(0, 2.0)),
-                                   iaa.MedianBlur(k=(1.0, 3.0)),
+                                   iaa.MedianBlur(k=(1, 3)),
                                ]),
                                iaa.AdditiveGaussianNoise(scale=(0, 0.05 * 255))
                            ],

@@ -44,8 +44,11 @@ class BatchGenerator(Sequence):
 
         for folder_path in self.image_path[l_bound:r_bound]:
             folder_name = folder_path.split('/')[-1]
-            video_id, object_id = folder_name[:-2], folder_name[-1]
+
+            object_id = folder_name.split('_')[-1]
+            video_id = folder_name[:-(len(object_id) + 1)]
             object_id = int(float(object_id))
+
             video_labels = self.labels[self.labels['video_id'] == video_id]
             video_id_labels = video_labels[video_labels['object_id'] == object_id]
 
@@ -68,10 +71,11 @@ class BatchGenerator(Sequence):
             template_image = load_image(os.path.join(folder_path, template_image_path))
             detection_image = load_image(os.path.join(folder_path, detection_image_path))
             height, width, _ = template_image.shape
-            template_gt_corner = np.array([int(template_info[6]*width), int(template_info[8]*height),
-                                    int(template_info[7]*width), int(template_info[9]*height)])
-            detection_gt_corner = np.array([int(detection_info[6]*width), int(detection_info[8]*height),
-                                     int(detection_info[7]*width), int(detection_info[9]*height)])
+
+            template_gt_corner = np.array([int(float(template_info[6])*width), int(float(template_info[8])*height),
+                                           int(float(template_info[7])*width), int(float(template_info[9])*height)])
+            detection_gt_corner = np.array([int(float(detection_info[6])*width), int(float(detection_info[8])*height),
+                                            int(float(detection_info[7])*width), int(float(detection_info[9])*height)])
 
             template_gt_center = corner_to_center(template_gt_corner)
             detection_gt_center = corner_to_center(detection_gt_corner)
@@ -271,8 +275,8 @@ class BatchGenerator(Sequence):
 
 
 if __name__ == '__main__':
-    BatchGenerator('../data/image',
-                   '../data/csv/yt_bb_detection_validation.csv',
+    BatchGenerator('/home/seok/tracking/Siamese-RPN/Youtube_BB/Youtube_BB_Valid/videos/yt_bb_detection_validation',
+                   '/home/seok/tracking/Siamese-RPN/Youtube_BB/Youtube_BB_Valid/yt_bb_detection_validation.csv',
                    32,
                    100,
                    True).__getitem__(0)

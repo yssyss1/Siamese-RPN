@@ -1,3 +1,6 @@
+import sys
+sys.path.append("..")
+
 from pretrain.alexnet import alex_net
 from pretrain.generator import BatchGenerator
 from keras.optimizers import Adam
@@ -56,4 +59,10 @@ def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_pat
                         shuffle=False)
 
 
-train('/home/seok/ImageNet_t', '/home/seok/ImageNet_t', (255, 255, 3), 100, 3, './result')
+if __name__ == '__main__':
+    train('/home/seok/data/ImageNet_t/train',
+          '/home/seok/data/ImageNet_t/val',
+          (255, 255, 3),
+          10000,
+          128,
+          './result')

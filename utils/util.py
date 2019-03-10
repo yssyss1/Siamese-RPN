@@ -1,6 +1,9 @@
 import os
 import cv2
 import numpy as np
+from glob import glob
+import shutil
+from tqdm import tqdm
 
 
 def is_exist(file_path):
@@ -66,4 +69,9 @@ def corner_to_center(arr):
         arr_[:, 2] = (arr[:, 2]-arr[:, 0])
         arr_[:, 3] = (arr[:, 3]-arr[:, 1])
 
-    return arr_
+    return arr
+
+
+def move_folders(src, dest):
+    for folder_path in tqdm(glob(os.path.join(src, '*'))):
+        shutil.move(folder_path, dest)

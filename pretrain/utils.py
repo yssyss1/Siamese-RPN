@@ -3,13 +3,13 @@ from glob import glob
 import shutil
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 ### ImageNet Preprocessing ###
 
 
 def label_to_idx(root_dir, save_path):
     folder_list = os.listdir(root_dir)
-
     f = open("{}/label.txt".format(save_path), 'w')
     for idx, folder_name in enumerate(folder_list):
         f.write("{}, {}\n".format(idx+1, folder_name))
@@ -41,7 +41,7 @@ def move_one_directory(root_dir, dest_dir):
     folder_list = glob(os.path.join(root_dir, '*'))
     os.makedirs(dest_dir, exist_ok=True)
 
-    for folder in folder_list:
+    for folder in tqdm(folder_list):
         image_list = glob(os.path.join(folder, '*.JPEG'))
         for image_path in image_list:
             shutil.move(image_path, os.path.join(dest_dir, image_path.split('/')[-1]))
@@ -71,6 +71,6 @@ def normalize(image):
 
 
 if __name__ == '__main__':
-    label_to_idx('/home/seok/ImageNet/', './')
-    rename_for_label('/home/seok/ImageNet/', './label.txt')
-    move_one_directory('/home/seok/ImageNet/', '/home/seok/ImageNet_t')
+    # label_to_idx('/home/seok/data/ImageNet/train', './')
+    # rename_for_label('/home/seok/data/ImageNet/val', './label.txt')
+    move_one_directory('/home/seok/data/ImageNet/val', '/home/seok/data/ImageNet_t/val')
