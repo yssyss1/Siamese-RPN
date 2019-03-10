@@ -56,12 +56,14 @@ def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_pat
                         validation_data=val_generator,
                         validation_steps=len(val_generator),
                         callbacks=[checkpoint, reduce_lr, PlotLossGraph(model, val_generator)],
+                        workers=24,
+                        max_queue_size=128,
                         shuffle=False)
 
 
 if __name__ == '__main__':
-    train('/home/seok/data/ImageNet_t/train',
-          '/home/seok/data/ImageNet_t/val',
+    train('/home/teslaserver/ImageNet/train',
+          '/home/teslaserver/ImageNet/val',
           (255, 255, 3),
           10000,
           128,
