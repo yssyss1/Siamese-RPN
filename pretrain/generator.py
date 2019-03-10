@@ -1,4 +1,4 @@
-from keras.utils import Sequence
+from keras.utils import Sequence, to_categorical
 import numpy as np
 from glob import glob
 import os
@@ -69,18 +69,13 @@ class BatchGenerator(Sequence):
             image = normalize(image)
 
             gt = int(image_path.split('/')[-1].split('_')[0])
-            gt = self.one_hot_encoding(gt)
+            gt = to_categorical(gt, self.label_length)
 
             image_batch[instance] = image
             gt_batch[instance] = gt
             instance += 1
 
         return image_batch, gt_batch
-
-    def one_hot_encoding(self, idx):
-        arr = np.zeros(self.label_length)
-        arr[idx-1] = 1
-        return arr
 
     def on_epoch_end(self):
         if self.shuffle:
