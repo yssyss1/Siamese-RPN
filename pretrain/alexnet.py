@@ -1,4 +1,4 @@
-from keras.layers import Conv2D, MaxPool2D, Activation, Input, Flatten, Dense
+from keras.layers import Conv2D, MaxPool2D, Activation, Input, Flatten, Dense, Dropout
 from keras.models import Model
 
 
@@ -37,7 +37,9 @@ def alex_net(input_shape=(None, None, 3)):
 
     x = MaxPool2D(pool_size=3, strides=2)(x)
     x = Flatten()(x)
+    x = Dropout(rate=0.3)(x)
     x = Dense(units=4096, activation='relu', name='Alex_Dense_1')(x)
+    x = Dropout(rate=0.3)(x)
     x = Dense(units=4096, activation='relu', name='Alex_Dense_2')(x)
     output = Dense(units=1000, activation='softmax', name='Alex_Dense_3')(x)
 

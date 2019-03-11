@@ -3,7 +3,7 @@ sys.path.append("..")
 
 from pretrain.alexnet import alex_net
 from pretrain.generator import BatchGenerator
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, Callback
 import matplotlib.pyplot as plt
 import os
@@ -28,12 +28,16 @@ class PlotLossGraph(Callback):
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.savefig('./loss.png')
+        self.model.save_weights('./result/alexNet_train.h5')
 
 
-def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_path):
+def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_path, load_weight=None):
     os.makedirs(weight_save_path, exist_ok=True)
     model = alex_net(input_shape=image_shape)
-    model.compile(optimizer=Adam(lr=1e-3), loss='categorical_crossentropy', metrics=['acc'])
+    model.compile(optimizer=SGD(lr=1e-3, momentum=0.9, decay=5e-4), loss='categorical_crossentropy', metrics=['acc'])
+
+    if load_weight is not None:
+        model.save_weights(load_weight)
 
     train_generator = BatchGenerator(train_path, batch_size, image_shape, shuffle=True)
     val_generator = BatchGenerator(val_path, batch_size, image_shape, shuffle=True, augmentation=False)
@@ -62,9 +66,10 @@ def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_pat
 
 
 if __name__ == '__main__':
-    train('/home/teslaserver/ImageNet/train',
-          '/home/teslaserver/ImageNet/val',
+    train('/home/seok/data/ImageNet_t/train',
+          '/home/seok/data/ImageNet_t/val',
           (255, 255, 3),
           10000,
           128,
-          './result')
+          './result',
+          './result/alexNet.h5')
