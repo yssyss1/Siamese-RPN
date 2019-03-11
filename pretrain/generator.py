@@ -69,7 +69,7 @@ class BatchGenerator(Sequence):
             image = normalize(image)
 
             gt = int(image_path.split('/')[-1].split('_')[0])
-            gt = to_categorical(gt, self.label_length)
+            gt = to_categorical(gt-1, self.label_length)
 
             image_batch[instance] = image
             gt_batch[instance] = gt
