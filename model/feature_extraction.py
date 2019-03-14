@@ -18,10 +18,10 @@ def alexNet(img):
                    use_maxpool=True,
                    use_activation=True,
                    use_batchnorm=True,
-                   Traiable=True
+                   trainable=True
                    ):
         def _conv_block(x):
-            x = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, Traiable=Traiable,
+            x = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, trainable=trainable,
                        name='Alex_Conv_{}'.format(idx))(x)
 
             if use_batchnorm:
@@ -39,9 +39,9 @@ def alexNet(img):
 
     # ======== FREEZE ========
     # PRETRAINED LAYER WITH IMAGENET DATASET
-    x = conv_block(filters=96, kernel_size=11, strides=2, idx=0, Traiable=False)(img)
-    x = conv_block(filters=256, kernel_size=5, strides=1, idx=1, Traiable=False)(x)
-    x = conv_block(filters=384, kernel_size=3, strides=1, idx=2, use_maxpool=False, Traiable=False)(x)
+    x = conv_block(filters=96, kernel_size=11, strides=2, idx=0, trainable=False)(img)
+    x = conv_block(filters=256, kernel_size=5, strides=1, idx=1, trainable=False)(x)
+    x = conv_block(filters=384, kernel_size=3, strides=1, idx=2, use_maxpool=False, trainable=False)(x)
     # ======== FREEZE ========
 
     x = conv_block(filters=384, kernel_size=3, strides=1, idx=3, use_maxpool=False)(x)
