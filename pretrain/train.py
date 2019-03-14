@@ -35,7 +35,9 @@ class PlotLossGraph(Callback):
 def train(train_path, val_path, image_shape, epochs, batch_size, weight_save_path, load_weight=None):
     os.makedirs(weight_save_path, exist_ok=True)
     model = alex_net(input_shape=image_shape)
-    model.compile(optimizer=SGD(lr=5e-4, momentum=0.9, decay=5e-4), loss='categorical_crossentropy', metrics=['acc'])
+    
+    model.compile(optimizer=SGD(lr=1e-2, momentum=0.9, decay=5e-4), loss='categorical_crossentropy', metrics=['acc'])
+    #model.compile(optimizer=Adam(lr=1e-2, decay=1e-4), loss='categorical_crossentropy', metrics=['acc'])
     if load_weight is not None:
         model.load_weights(load_weight)
 
@@ -69,6 +71,6 @@ if __name__ == '__main__':
           '/home/teslaserver/ImageNet/val/val',
           (255, 255, 3),
           10000,
-          256,
+          128,
           './result',
-          './result/alexNet.h5')
+          None)

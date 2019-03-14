@@ -19,7 +19,7 @@ def alex_net(input_shape=(None, None, 3)):
                        name='Alex_Conv_{}'.format(idx))(x)
 
             if use_batchnorm:
-                x = BatchNormalization()(x)
+                x = BatchNormalization(name='Alex_BN_{}'.format(idx))(x)
 
             if use_maxpool:
                 x = MaxPool2D(pool_size=pool_size, strides=pool_stride, name='Alex_Maxpool_{}'.format(idx))(x)
@@ -40,8 +40,8 @@ def alex_net(input_shape=(None, None, 3)):
     x = conv_block(filters=256, kernel_size=3, strides=1, idx=4, use_maxpool=False, use_activation=False)(x)
     """ pretraining """
 
-    x = MaxPool2D(pool_size=3, strides=2)(x)
-    x = Activation('relu')(x)
+    x = MaxPool2D(pool_size=3, strides=2, name='Alex_Maxpool_4')(x)
+    x = Activation('relu', name='Alex_Activation_4')(x)
     x = Flatten()(x)
     x = Dense(units=4096, activation='relu', name='Alex_Dense_1')(x)
     x = Dense(units=4096, activation='relu', name='Alex_Dense_2')(x)
