@@ -15,20 +15,22 @@ def dataset_check(csv_path, train_image_path, val_image_path):
 
     for img_dirs in [train_image_dirs, val_image_dirs]:
         for train_image_dir in tqdm(img_dirs):
-            object_id = train_image_dir.split('_')[-1]
-            video_id = train_image_dir[:-(len(object_id) + 1)]
-            object_id = int(float(object_id))
+                object_id = train_image_dir.split('_')[-1]
+                video_id = train_image_dir[:-(len(object_id) + 1)]
+                object_id = int(float(object_id))
 
-            label = labels.get_group((video_id, object_id)).values
-            imgs = glob(os.path.join(os.path.join(train_image_path, train_image_dir), '*'))
+                label = labels.get_group((video_id, object_id)).values
+                imgs = glob(os.path.join(os.path.join(train_image_path, train_image_dir), '*'))
 
-            for l in label:
-                image_name = '{}_{}_{}_{}.jpg'.format(l[0], l[1], l[2],
-                                                               l[4])
-                img_path = os.path.join(os.path.join(train_image_path, train_image_dir), image_name)
+                vid_data = train_image_dir.split('_')[0] == 'train'
+                for l in label:
+                    video_id = str(l[1]).rjust(6, '0') if vid_data else l[1]
+                    name_format = '{}_{}_{}_{}.JPEG' if vid_data else '{}_{}_{}_{}.jpg'
+                    image_name = name_format.format(l[0], video_id, l[2], l[4])
+                    img_path = os.path.join(os.path.join(train_image_path, train_image_dir), image_name)
 
-                if img_path not in imgs:
-                    print(train_image_dir)
+                    if img_path not in imgs:
+                        print(train_image_dir)
 
 
 def read_csv(csv_path):
