@@ -51,11 +51,6 @@ class BatchGenerator(Sequence):
 
             labels = self.labels.get_group((video_id, object_id)).values
 
-            # video_labels = self.labels[self.labels['video_id'] == video_id]
-            # video_id_labels = video_labels[video_labels['object_id'] == object_id]
-            #
-            # labels = video_id_labels.values
-
             data_num = len(labels)
             template_idx = random.choice(range(data_num))
 
@@ -66,10 +61,17 @@ class BatchGenerator(Sequence):
             template_info = labels[template_idx]
             detection_info = labels[detection_idx]
 
-            template_image_path = '{}_{}_{}_{}.jpg'.format(template_info[0], template_info[1], template_info[2],
+            vid_data = folder_name.split('_')[0] == 'train' or folder_name.split('_')[0] == 'val'
+            template_video_id = str(template_info[1]).rjust(6, '0') if vid_data else template_info[1]
+            detection_video_id = str(detection_info[1]).rjust(6, '0') if vid_data else detection_info[1]
+
+            name_format = '{}_{}_{}_{}.JPEG' if vid_data else '{}_{}_{}_{}.jpg'
+
+            template_image_path = name_format.format(template_info[0], template_video_id, template_info[2],
                                                            template_info[4])
-            detection_image_path = '{}_{}_{}_{}.jpg'.format(detection_info[0], detection_info[1], detection_info[2],
+            detection_image_path = name_format.format(detection_info[0], detection_video_id, detection_info[2],
                                                            detection_info[4])
+
             template_image = load_image(os.path.join(folder_path, template_image_path))
             detection_image = load_image(os.path.join(folder_path, detection_image_path))
             height, width, _ = template_image.shape
