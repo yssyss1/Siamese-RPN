@@ -7,9 +7,9 @@ class Config:
     epoch = 50
     loss_huber_delta = 1.0
     loss_lamda = 1.0
-    train_image_path = '/media/seok/My Passport/yt_bb/data/train'
-    val_image_path = '/media/seok/My Passport/yt_bb/data/valid'
-    csv_path = '/media/seok/My Passport/yt_bb/csv/all.csv'
+    train_image_path = '/home/teslaserver/ssd/yt_bb/data/train'
+    val_image_path = '/home/teslaserver/ssd/yt_bb/data/valid'
+    csv_path = '/home/teslaserver/ssd/yt_bb/csv/all.csv'
     batch_size = 32
     frame_select_range = 100
 
