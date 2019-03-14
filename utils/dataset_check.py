@@ -42,7 +42,7 @@ def dataset_check(csv_path, image_path):
                     if os.stat(img_path).st_size == 0:
                         print(img_path + ' is removed')
                         os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
-                        labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
+                        #labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
 
                 imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
 
@@ -50,7 +50,7 @@ def dataset_check(csv_path, image_path):
                     print(img_dir + ' folder is removed')
                     shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
 
-    write_csv(labels.values, 'output.csv')
+    #write_csv(labels.values, 'output.csv')
 
 
 def write_csv(rows, save_path, mode='w'):
@@ -75,4 +75,4 @@ def read_csv(csv_path):
 
 
 c = Config()
-dataset_check(c.csv_path, '/media/seok/My Passport/yt_bb/data/')
+dataset_check('/home/teslaserver/ssd/yt_bb/csv/all.csv', '/home/teslaserver/ssd/yt_bb/data')

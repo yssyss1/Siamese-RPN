@@ -36,6 +36,7 @@ def train():
                         validation_data=val_data_generator,
                         validation_steps=len(val_data_generator),
                         verbose=1,
+                        workers=20,
                         shuffle=False
                         )
 

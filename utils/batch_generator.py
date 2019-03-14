@@ -42,7 +42,7 @@ class BatchGenerator(Sequence):
         gt_object_batch = []
         gt_box_batch = []
 
-        for folder_path in tqdm(self.image_path[l_bound:r_bound]):
+        for folder_path in self.image_path[l_bound:r_bound]:
             folder_name = folder_path.split('/')[-1]
 
             object_id = folder_name.split('_')[-1]

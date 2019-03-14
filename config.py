@@ -9,7 +9,7 @@ class Config:
     loss_lamda = 1.0
     train_image_path = '/home/teslaserver/ssd/yt_bb/data/train'
     val_image_path = '/home/teslaserver/ssd/yt_bb/data/valid'
-    csv_path = '/home/teslaserver/ssd/yt_bb/csv/all.csv'
+    csv_path = 'output.csv'
     batch_size = 32
     frame_select_range = 100
 
