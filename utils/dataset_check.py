@@ -6,13 +6,16 @@ from config import Config
 from glob import glob
 from tqdm import tqdm
 import os
+import cv2
+import shutil
+import csv
 
 
 def dataset_check(csv_path, image_path):
-    labels = read_csv(csv_path)
+    g_labels, labels = read_csv(csv_path)
 
     train_root_dir = os.path.join(image_path, 'train')
-    val_root_dir = os.path.join(image_path, 'val')
+    val_root_dir = os.path.join(image_path, 'valid')
     train_image_dirs = os.listdir(train_root_dir)
     val_image_dirs = os.listdir(val_root_dir)
 
@@ -22,7 +25,7 @@ def dataset_check(csv_path, image_path):
                 video_id = img_dir[:-(len(object_id) + 1)]
                 object_id = int(float(object_id))
 
-                label = labels.get_group((video_id, object_id)).values
+                label = g_labels.get_group((video_id, object_id)).values
                 imgs = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
 
                 vid_data = img_dir.split('_')[0] == 'train' or img_dir.split('_')[0] == 'val'
@@ -35,6 +38,28 @@ def dataset_check(csv_path, image_path):
                     if img_path not in imgs:
                         print(image_name)
 
+                    if os.stat(img_path).st_size == 0:
+                        print(img_path + ' is removed')
+                        # os.remove(img_path)
+                        labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
+
+                imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
+
+                if len(imgs_after) == 0:
+                    print(img_dir + ' folder is removed')
+                    # shutil.rmtree(os.path.join(root_dir, img_dir))
+
+    write_csv(labels.values, 'output.csv')
+
+
+def write_csv(rows, save_path, mode='w'):
+    f = open(save_path, mode)
+    writer = csv.writer(f)
+
+    for row in rows:
+        writer.writerow(row)
+    f.close()
+
 
 def read_csv(csv_path):
     col_names = ['video_id', 'timestamp_ms', 'class_id', 'class_name',
@@ -45,8 +70,8 @@ def read_csv(csv_path):
     labels = labels.drop(labels[labels['object_presence'] == 'uncertain'].index)
 
     g_labels = labels.groupby([labels.video_id, labels.object_id])
-    return g_labels
+    return g_labels, labels
 
 
 c = Config()
-dataset_check(c.csv_path, '/')
+dataset_check(c.csv_path, '/media/seok/My Passport/yt_bb/data/')
