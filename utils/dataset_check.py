@@ -22,7 +22,7 @@ def dataset_check(csv_path, train_image_path, val_image_path):
                 label = labels.get_group((video_id, object_id)).values
                 imgs = glob(os.path.join(os.path.join(train_image_path, train_image_dir), '*'))
 
-                vid_data = train_image_dir.split('_')[0] == 'train'
+                vid_data = train_image_dir.split('_')[0] == 'train' or train_image_dir.split('_')[0] == 'val'
                 for l in label:
                     video_id = str(l[1]).rjust(6, '0') if vid_data else l[1]
                     name_format = '{}_{}_{}_{}.JPEG' if vid_data else '{}_{}_{}_{}.jpg'
