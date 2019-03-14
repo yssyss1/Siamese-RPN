@@ -1,4 +1,4 @@
-from keras.layers import Conv2D, MaxPool2D, Activation, Input
+from keras.layers import Conv2D, MaxPool2D, Activation, Input, BatchNormalization
 from keras.models import Model
 
 
@@ -8,21 +8,34 @@ def alexNet(img):
     In paper, the author used the modified AlexNet, where the groups from conv2 and conv4 are removed
     First three layers must be freezed after pretraining with IMAGENET dataset
     """
-    def conv_block(filters, kernel_size, strides, idx, pool_size=3, pool_stride=2, activation='relu',
-                   use_maxpool=True, use_activation=True):
+    def conv_block(filters,
+                   kernel_size,
+                   strides,
+                   idx,
+                   pool_size=3,
+                   pool_stride=2,
+                   activation='relu',
+                   use_maxpool=True,
+                   use_activation=True,
+                   use_batchnorm=True
+                   ):
         def _conv_block(x):
             x = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
                        name='Alex_Conv_{}'.format(idx))(x)
 
-            if use_activation:
-                x = Activation(activation=activation, name='Alex_Activation_{}'.format(idx))(x)
+            if use_batchnorm:
+                x = BatchNormalization(name='Alex_BN_{}'.format(idx))(x)
 
             if use_maxpool:
                 x = MaxPool2D(pool_size=pool_size, strides=pool_stride, name='Alex_Maxpool_{}'.format(idx))(x)
 
+            if use_activation:
+                x = Activation(activation=activation, name='Alex_Activation_{}'.format(idx))(x)
+
             return x
 
         return _conv_block
+
 
     # ======== FREEZE ========
     # PRETRAINED LAYER WITH IMAGENET DATASET
@@ -32,7 +45,7 @@ def alexNet(img):
     # ======== FREEZE ========
 
     x = conv_block(filters=384, kernel_size=3, strides=1, idx=3, use_maxpool=False)(x)
-    x = conv_block(filters=256, kernel_size=3, strides=1, idx=4, use_maxpool=False)(x)
+    x = conv_block(filters=256, kernel_size=3, strides=1, idx=4, use_maxpool=False, use_activation=False)(x)
 
     return x
 
