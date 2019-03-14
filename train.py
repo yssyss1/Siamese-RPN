@@ -17,6 +17,7 @@ def train():
     """
     model = SiameseRPN().build_model()
     model.compile(optimizer=SGD(lr=Config.lr), loss=rpn_loss)
+    model.load_weights('./weight/alexNet.h5', by_name=True)
     train_data_generator = BatchGenerator(Config.train_image_path,
                                           Config.csv_path,
                                           Config.batch_size,
