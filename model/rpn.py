@@ -25,14 +25,14 @@ class SiameseRPN:
         template_feature = self.feature_extraction(template)
         detection_feature = self.feature_extraction(detection)
 
-        detection_cls_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu',
+        detection_cls_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
                                        name='RPN_Detection_CLS_Conv')(detection_feature)
-        detection_reg_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu',
+        detection_reg_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
                                        name='RPN_Detection_REG_Conv')(detection_feature)
 
-        template_cls_feature = Conv2D(filters=2 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu',
+        template_cls_feature = Conv2D(filters=2 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
                                       name='RPN_Template_CLS_Conv')(template_feature)
-        template_reg_feature = Conv2D(filters=4 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu',
+        template_reg_feature = Conv2D(filters=4 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
                                       name='RPN_Template_REG_Conv')(template_feature)
 
         # One Shot Detection
