@@ -40,14 +40,8 @@ def rpn_loss(y_true, y_pred):
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
-    a = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
-    b = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
-=======
     a = np.ones((2, 17, 17, 30)).astype(np.float32)
     b = np.ones((2, 17, 17, 30)).astype(np.float32)
->>>>>>> c72649230456f63ad2454c03deaaeebfe26fa4e1
-
     rpn_loss(a, b)
 
 

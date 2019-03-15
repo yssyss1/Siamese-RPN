@@ -10,7 +10,7 @@ class Config:
     train_image_path = '/home/teslaserver/ssd/yt_bb/data/train'
     val_image_path = '/home/teslaserver/ssd/yt_bb/data/valid'
     csv_path = 'output.csv'
-    batch_size = 32
+    batch_size = 64
     frame_select_range = 100
 
 
