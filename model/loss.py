@@ -1,22 +1,29 @@
+import sys
+sys.path.append("..")
+
 import tensorflow as tf
 import numpy as np
 from config import Config
 
 
 def rpn_loss(y_true, y_pred):
-    class_prediction = y_pred[..., :2]
-    class_gt = y_true[..., :2]
-    coord_prediction = y_pred[..., 2:]
-    coord_gt = y_true[..., 2:]
+    class_prediction = tf.reshape(y_pred[..., :5*2], (-1, 17, 17, 5, 2))
+    class_gt = tf.reshape(y_pred[..., :5*2], (-1, 17, 17, 5, 2))
+    coord_prediction = tf.reshape(y_true[..., 5*2:], (-1, 17, 17, 5, 4))
+    coord_gt = tf.reshape(y_true[..., 5*2:], (-1, 17, 17, 5, 4))
 
     """ Class loss """
     objectness = tf.argmax(class_gt[..., :2], -1)
-    responsibility = tf.reduce_sum(class_prediction, axis=-1)
+    responsibility = tf.reduce_sum(class_gt, axis=-1)
     responsibile_mask = tf.to_float(responsibility > Config.eps)
     num_responsible_box = tf.reduce_sum(responsibile_mask)
 
+    num_responsible_box = tf.Print(num_responsible_box, [num_responsible_box], message="\nNumber")
+
     class_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=objectness, logits=class_prediction)
+    class_loss = tf.Print(class_loss, [class_loss], message="\nLoss Class Before")
     class_loss = tf.reduce_sum(class_loss * responsibile_mask) / (num_responsible_box + Config.eps)
+    class_loss = tf.Print(class_loss, [class_loss], message="\nLoss Class After")
     """ Class loss """
 
     """ Coord loss """
@@ -30,12 +37,14 @@ def rpn_loss(y_true, y_pred):
     coord_loss = tf.reduce_sum(coord_loss) / num_positive_box
     """ Coord loss """
 
+    class_loss = tf.Print(class_loss, [class_loss], message="Loss Reg")
+
     return class_loss + Config.loss_lamda * coord_loss
 
 
 if __name__ == '__main__':
-    a = np.ones((2, 17, 17, 5, 6)).astype(np.float32)
-    b = np.ones((2, 17, 17, 5, 6)).astype(np.float32)
+    a = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
+    b = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
 
     rpn_loss(a, b)
 
