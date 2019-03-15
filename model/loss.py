@@ -12,13 +12,10 @@ def rpn_loss(y_true, y_pred):
     coord_prediction = tf.reshape(y_true[..., 5*2:], (-1, 17, 17, 5, 4))
     coord_gt = tf.reshape(y_true[..., 5*2:], (-1, 17, 17, 5, 4))
 
-    """ Class loss """
-    objectness = tf.argmax(class_gt[..., :2], -1)
-    responsibility = tf.reduce_sum(class_gt, axis=-1)
+    objectness = tf.argmax(class_gt, -1) # (batch, 17, 17, 5)
+    responsibility = tf.reduce_sum(class_prediction, axis=-1) # (batch, 17, 17, 5)
     responsibile_mask = tf.to_float(responsibility > Config.eps)
     num_responsible_box = tf.reduce_sum(responsibile_mask)
-
-    num_responsible_box = tf.Print(num_responsible_box, [num_responsible_box], message="\nNumber")
 
     class_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=objectness, logits=class_prediction)
     class_loss = tf.Print(class_loss, [class_loss], message="\nLoss Class Before")
@@ -27,9 +24,9 @@ def rpn_loss(y_true, y_pred):
     """ Class loss """
 
     """ Coord loss """
-    absolute_diff = tf.abs(coord_gt - coord_prediction) # 17, 17, 5, 4
-    positive_anchor = tf.to_float(class_gt[..., 0] > Config.eps)
-    positive_mask = tf.expand_dims(positive_anchor, axis=-1)
+    absolute_diff = tf.abs(coord_gt - coord_prediction) # (batch, 17, 17, 5, 4)
+    positive_anchor = tf.to_float(class_gt[..., 0] > Config.eps) # (batch, 17, 17, 5)
+    positive_mask = tf.expand_dims(positive_anchor, axis=-1) # (batch, 17, 17, 5, 1)
     num_positive_box = tf.reduce_sum(positive_anchor)
 
     absolute_diff = absolute_diff * positive_mask
@@ -43,8 +40,13 @@ def rpn_loss(y_true, y_pred):
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     a = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
     b = np.ones((2, 17, 17, 5, 30)).astype(np.float32)
+=======
+    a = np.ones((2, 17, 17, 30)).astype(np.float32)
+    b = np.ones((2, 17, 17, 30)).astype(np.float32)
+>>>>>>> c72649230456f63ad2454c03deaaeebfe26fa4e1
 
     rpn_loss(a, b)
 
