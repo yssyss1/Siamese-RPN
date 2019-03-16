@@ -10,7 +10,7 @@ from config import Config
 from model.loss import rpn_loss
 from utils.batch_generator import BatchGenerator
 import matplotlib.pyplot as plt
-from keras.callbacks import Callback, ReduceLROnPlateau, ModelCheckpoint
+from keras.callbacks import Callback, ReduceLROnPlateau, ModelCheckpoint, LearningRateScheduler
 import os
 from keras import backend as K
 
@@ -39,6 +39,13 @@ class PlotLossGraph(Callback):
 
         lr = K.eval(self.model.optimizer.lr)
         self.model.save_weights(os.path.join(self.weight_save_path, 'Siamese_RPN_train_{}.h5'.format(lr)))
+
+
+def log_scale_decay(epoch):
+   initial_lrate = 1e-2
+   k = 0.185
+   lrate = initial_lrate * np.exp(-k*epoch)
+   return lrate
 
 
 def train(weight_save_path='./results'):
@@ -71,9 +78,6 @@ def train(weight_save_path='./results'):
                                  save_weights_only=True,
                                  period=1)
 
-    reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.9,
-                                  patience=1, min_lr=1e-6)
-
     model.fit_generator(generator=train_data_generator,
                         steps_per_epoch=len(train_data_generator),
                         epochs=Config.epoch,
@@ -81,7 +85,7 @@ def train(weight_save_path='./results'):
                         validation_steps=len(val_data_generator),
                         verbose=1,
                         workers=20,
-                        callbacks=[checkpoint, reduce_lr, PlotLossGraph(model, val_data_generator, weight_save_path)],
+                        callbacks=[checkpoint, LearningRateScheduler(log_scale_decay), PlotLossGraph(model, val_data_generator, weight_save_path)],
                         shuffle=False
                         )
 
