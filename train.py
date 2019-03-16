@@ -72,8 +72,8 @@ def train(weight_save_path='./results'):
                                  period=1)
 
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.9,
-                                  patience=5, min_lr=1e-6)
-    print(K.eval(model.optimizer.lr))
+                                  patience=1, min_lr=1e-6)
+
     model.fit_generator(generator=train_data_generator,
                         steps_per_epoch=len(train_data_generator),
                         epochs=Config.epoch,
