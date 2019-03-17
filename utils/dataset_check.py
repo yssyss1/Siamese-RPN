@@ -76,16 +76,16 @@ def dataset_check(csv_path, image_path):
                     area = (template_gt_corner[2] - template_gt_corner[0]) * (template_gt_corner[3] - template_gt_corner[1])
                     if area < 10:
                         print(img_path + ' is too small')
-                        #os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
-                        #labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
+                        os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
+                        labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
 
                 imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
 
                 if len(imgs_after) == 0:
                     print(img_dir + ' folder is removed')
-                    #shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
+                    shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
 
-    #write_csv(labels.values, 'output.csv')
+    write_csv(labels.values, 'output_f.csv')
 
 
 def write_csv(rows, save_path, mode='w'):
