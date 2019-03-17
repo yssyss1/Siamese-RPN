@@ -17,7 +17,7 @@ def empty_file_check(image_path):
     train_image_dirs = os.listdir(train_root_dir)
     val_image_dirs = os.listdir(val_root_dir)
 
-    os.makedirs(os.path.join(image_path, 'temp'))
+    os.makedirs(os.path.join(image_path, 'temp'), exist_ok=True)
     for img_dirs, root_dir in [(train_image_dirs, train_root_dir), (val_image_dirs, val_root_dir)]:
         for img_dir in tqdm(img_dirs):
             imgs = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
@@ -25,14 +25,14 @@ def empty_file_check(image_path):
             for img in imgs:
                 if os.stat(img).st_size == 0:
                     print(img + ' is removed')
+                    os.rename(img, os.path.join(os.path.join(image_path, 'temp'), img.split('/')[-1]))
 
             imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
 
             if len(imgs_after) == 0:
                 print(img_dir + ' folder is removed')
-                # shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
+                shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
 
-    # write_csv(labels.values, 'output.csv')
 
 def dataset_check(csv_path, image_path):
     g_labels, labels = read_csv(csv_path)
