@@ -9,6 +9,8 @@ import os
 import cv2
 import shutil
 import csv
+import imagesize
+import numpy as np
 
 
 def empty_file_check(image_path):
@@ -42,7 +44,7 @@ def dataset_check(csv_path, image_path):
     train_image_dirs = os.listdir(train_root_dir)
     val_image_dirs = os.listdir(val_root_dir)
 
-    os.makedirs(os.path.join(image_path, 'temp'))
+    os.makedirs(os.path.join(image_path, 'temp'), exist_ok=True)
     for img_dirs, root_dir in [(train_image_dirs, train_root_dir), (val_image_dirs, val_root_dir)]:
         for img_dir in tqdm(img_dirs):
                 object_id = img_dir.split('_')[-1]
@@ -64,6 +66,16 @@ def dataset_check(csv_path, image_path):
 
                     if os.stat(img_path).st_size == 0:
                         print(img_path + ' is removed')
+                        #os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
+                        #labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
+
+                    width, height = imagesize.get(img_path)
+                    template_gt_corner = np.array(
+                        [int(float(l[6]) * width), int(float(l[8]) * height),
+                         int(float(l[7]) * width), int(float(l[9]) * height)])
+                    area = (template_gt_corner[2] - template_gt_corner[0]) * (template_gt_corner[3] - template_gt_corner[1])
+                    if area < 10:
+                        print(img_path + ' is too small')
                         #os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
                         #labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
 
@@ -98,4 +110,4 @@ def read_csv(csv_path):
 
 
 c = Config()
-dataset_check('/home/teslaserver/ssd/yt_bb/csv/all.csv', '/home/teslaserver/ssd/yt_bb/data')
+dataset_check('/media/seok/My Passport/yt_bb/csv/all.csv', '/media/seok/My Passport/yt_bb/data')
