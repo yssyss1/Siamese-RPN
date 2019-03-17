@@ -11,6 +11,29 @@ import shutil
 import csv
 
 
+def empty_file_check(image_path):
+    train_root_dir = os.path.join(image_path, 'train')
+    val_root_dir = os.path.join(image_path, 'valid')
+    train_image_dirs = os.listdir(train_root_dir)
+    val_image_dirs = os.listdir(val_root_dir)
+
+    os.makedirs(os.path.join(image_path, 'temp'))
+    for img_dirs, root_dir in [(train_image_dirs, train_root_dir), (val_image_dirs, val_root_dir)]:
+        for img_dir in tqdm(img_dirs):
+            imgs = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
+
+            for img in imgs:
+                if os.stat(img).st_size == 0:
+                    print(img + ' is removed')
+
+            imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
+
+            if len(imgs_after) == 0:
+                print(img_dir + ' folder is removed')
+                # shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
+
+    # write_csv(labels.values, 'output.csv')
+
 def dataset_check(csv_path, image_path):
     g_labels, labels = read_csv(csv_path)
     print(len(labels))
@@ -41,14 +64,14 @@ def dataset_check(csv_path, image_path):
 
                     if os.stat(img_path).st_size == 0:
                         print(img_path + ' is removed')
-                        os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
+                        #os.rename(img_path, os.path.join(os.path.join(image_path, 'temp'), image_name))
                         #labels = labels.drop(labels[(labels['video_id'] == l[0]) & (labels['timestamp_ms'] == l[1]) & (labels['object_id'] == l[4])].index)
 
                 imgs_after = glob(os.path.join(os.path.join(root_dir, img_dir), '*'))
 
                 if len(imgs_after) == 0:
                     print(img_dir + ' folder is removed')
-                    shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
+                    #shutil.move(os.path.join(root_dir, img_dir), os.path.join(os.path.join(image_path, 'temp'), img_dir))
 
     #write_csv(labels.values, 'output.csv')
 
