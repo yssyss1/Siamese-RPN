@@ -3,7 +3,7 @@ from keras.models import Model
 from keras.layers import Input, Conv2D, Layer, Concatenate
 import tensorflow as tf
 from keras.utils import plot_model
-
+from keras.initializers import RandomNormal
 
 class SiameseRPN:
     """
@@ -25,14 +25,14 @@ class SiameseRPN:
         template_feature = self.feature_extraction(template)
         detection_feature = self.feature_extraction(detection)
 
-        detection_cls_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
+        detection_cls_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer=RandomNormal(stddev=0.01),
                                        name='RPN_Detection_CLS_Conv')(detection_feature)
-        detection_reg_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
+        detection_reg_feature = Conv2D(detection_channel_num, kernel_size=3, activation='relu', kernel_initializer=RandomNormal(stddev=0.01),
                                        name='RPN_Detection_REG_Conv')(detection_feature)
 
-        template_cls_feature = Conv2D(filters=2 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
+        template_cls_feature = Conv2D(filters=2 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer=RandomNormal(stddev=0.01),
                                       name='RPN_Template_CLS_Conv')(template_feature)
-        template_reg_feature = Conv2D(filters=4 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer='he_normal',
+        template_reg_feature = Conv2D(filters=4 * self.anchor_num * detection_channel_num, kernel_size=3, activation='relu', kernel_initializer=RandomNormal(stddev=0.01),
                                       name='RPN_Template_REG_Conv')(template_feature)
 
         # One Shot Detection
