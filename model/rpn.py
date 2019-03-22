@@ -12,8 +12,9 @@ class SiameseRPN:
     The feature map extracted from template is used to make kernel in custom layer, SiamesConv
     That kernel is used to compute RPN output, box regression and objectness from detection feature map
     """
-    def __init__(self):
+    def __init__(self, pretrain_weight):
         self.feature_extraction = encoder()
+        self.feature_extraction.load_weights(pretrain_weight, by_name=True)
         self.anchor_num = 5
 
     def build_model(self, template_shape=(127, 127, 3),

@@ -48,16 +48,25 @@ def log_scale_decay(epoch):
    return lrate
 
 
-def train(weight_save_path='./results'):
+def train(weight_save_path='./results', pretrain_weight_path='./weight/alexNet.h5', load_weight=None):
     """
     Train Siamese-RPN with Youtube-BB and ISVRC Dataset
     """
 
     os.makedirs(weight_save_path, exist_ok=True)
 
-    model = SiameseRPN().build_model()
+    if not os.path.exists(pretrain_weight_path):
+        raise FileNotFoundError('pretraining weight {} is not exists'.format(pretrain_weight_path))
+
+    model = SiameseRPN(pretrain_weight_path).build_model()
     model.compile(optimizer=SGD(lr=Config.lr), loss=rpn_loss)
-    model.load_weights('./weight/alexNet.h5', by_name=True)
+
+    if load_weight is not None:
+        if not os.path.exists(load_weight):
+            raise FileNotFoundError('{} is not exists'.format(load_weight))
+
+        model.load_weights(load_weight)
+
     train_data_generator = BatchGenerator(Config.train_image_path,
                                           Config.csv_path,
                                           Config.batch_size,
@@ -84,11 +93,13 @@ def train(weight_save_path='./results'):
                         validation_data=val_data_generator,
                         validation_steps=len(val_data_generator),
                         verbose=1,
-                        workers=20,
+                        workers=1,
                         callbacks=[checkpoint, LearningRateScheduler(log_scale_decay), PlotLossGraph(model, val_data_generator, weight_save_path)],
                         shuffle=False
                         )
 
+
+train()
 
 def post_processing():
     """
@@ -102,14 +113,6 @@ def post_processing():
         Pick best one
     """
     pass
-
-
-def tracking():
-    """
-    Tracking all frames with given template
-    """
-    pass
-
 
 # import matplotlib.pyplot as plt
 #
@@ -125,4 +128,3 @@ def tracking():
 # plt.plot(a, w)
 # plt.show()
 
-train()
