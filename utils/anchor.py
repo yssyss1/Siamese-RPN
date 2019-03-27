@@ -94,7 +94,7 @@ class Anchor:
         # return (1445, 4) - ground truth for each anchors whose length is (1445, )
         return diff
 
-    def pos_neg_anchor(self, gt, data_num=64, threshold_pos=0.6, threshold_neg=0.3):
+    def pos_neg_anchor(self, gt, data_num=10, threshold_pos=0.6, threshold_neg=0.3):
         gt_corner = np.array(gt, dtype=np.float32).reshape(1, 4)
         iou_value = self.compute_iou(gt_corner).reshape(-1)  # (1445)
         pos, neg = np.zeros_like(iou_value), np.zeros_like(iou_value)
@@ -121,4 +121,19 @@ class Anchor:
         neg[neg_idx] = 1
 
         # (1445, ) size binary list ( 1 - positive sample, 0 - negative sample )
+        return pos, neg
+
+    def pos_neg_anchor_all(self, gt, pos_num=16, neg_num=48, threshold_pos=0.5, threshold_neg=0.1):
+        gt_corner = np.array(gt, dtype=np.float32).reshape(1, 4)
+        iou_value = self.compute_iou(gt_corner).reshape(-1)  # (1445)
+        pos, neg = np.zeros_like(iou_value), np.zeros_like(iou_value)
+
+        # pos
+        pos_index = np.argsort(iou_value)[::-1][:pos_num]
+        pos[pos_index] = 1
+
+        # neg
+        neg_cand = np.where(iou_value < threshold_neg)[0]
+        neg_ind = np.random.choice(neg_cand, neg_num, replace=False)
+        neg[neg_ind] = 1
         return pos, neg
