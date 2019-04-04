@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 import pandas as pd
 import os
-from utils.util import is_exist, load_image, corner_to_center, normalize, save_image
+from utils.util import is_exist, load_image, corner_to_center, normalize, save_image, center_to_corner
 import cv2
 import random
 from utils.anchor import Anchor
@@ -17,7 +17,7 @@ class BatchGenerator(Sequence):
         is_exist(image_path)
         is_exist(csv_path)
 
-        self.image_path = glob(os.path.join(image_path, '*'))
+        self.image_path = glob(os.path.join(image_path, '*')) * 12
         self.labels = self.read_csv(csv_path)
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -27,7 +27,7 @@ class BatchGenerator(Sequence):
         self.anchor = Anchor(self.score_size, self.score_size)
 
     def __len__(self):
-        return int(np.ceil(self.num_data / self.batch_size))
+        return 12#int(np.ceil(self.num_data / self.batch_size))
 
     def __getitem__(self, idx):
         l_bound = idx * self.batch_size
@@ -53,6 +53,7 @@ class BatchGenerator(Sequence):
 
             data_num = len(labels)
             template_idx = random.choice(range(data_num))
+            # template_idx = 0
 
             lower_bound = np.clip(template_idx - self.select_range, 0, data_num - 1)
             upper_bound = np.clip(template_idx + self.select_range, 0, data_num - 1)
@@ -64,7 +65,6 @@ class BatchGenerator(Sequence):
             vid_data = folder_name.split('_')[0] == 'train' or folder_name.split('_')[0] == 'val'
             template_video_id = str(template_info[1]).rjust(6, '0') if vid_data else template_info[1]
             detection_video_id = str(detection_info[1]).rjust(6, '0') if vid_data else detection_info[1]
-
             name_format = '{}_{}_{}_{}.JPEG' if vid_data else '{}_{}_{}_{}.jpg'
 
             template_image_path = name_format.format(template_info[0], template_video_id, template_info[2],
@@ -80,14 +80,33 @@ class BatchGenerator(Sequence):
                                            int(float(template_info[7])*width), int(float(template_info[9])*height)])
             detection_gt_corner = np.array([int(float(detection_info[6])*width), int(float(detection_info[8])*height),
                                             int(float(detection_info[7])*width), int(float(detection_info[9])*height)])
-
             template_gt_center = corner_to_center(template_gt_corner)
-            detection_gt_center = corner_to_center(detection_gt_corner)
 
+            # x1, y1, x2, y2 = detection_gt_corner
+
+            # left = random.randint(0, x1)
+            # right = random.randint(x2, width)
+            # top = random.randint(0, y1)
+            # bottom = random.randint(y2, height)
+            #
+            # detection_image = detection_image[top:bottom, left:right, :].copy()
+            # detection_gt_corner = np.array([x1-left, y1-top, x2-left, y2-top])
+            #
+            # scale_x = np.random.uniform() / 5. + 1
+            # scale_y = np.random.uniform() / 5. + 1
+            #
+            # detection_image = cv2.resize(detection_image, None, fx=scale_x, fy=scale_y)
+            # detection_gt_corner[0] *= scale_x
+            # detection_gt_corner[2] *= scale_x
+            # detection_gt_corner[1] *= scale_y
+            # detection_gt_corner[3] *= scale_y
+
+            detection_gt_center = corner_to_center(detection_gt_corner)
             t_img, d_img, gt_object, gt_box = self.preprocessing(template_image,
                                                                  detection_image,
                                                                  template_gt_center,
-                                                                 detection_gt_center
+                                                                 detection_gt_center,
+                                                                 detection_idx
                                                                  )
             template_img_batch.append(t_img)
             detection_img_batch.append(d_img)
@@ -97,7 +116,7 @@ class BatchGenerator(Sequence):
         gt = np.concatenate((gt_object_batch, gt_box_batch), axis=-1)
         return [np.array(template_img_batch), np.array(detection_img_batch)], gt
 
-    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center):
+    def preprocessing(self, template_img, detection_img, template_gt_center, detection_gt_center, id):
         template_origin_height, template_origin_width, _ = template_img.shape
         detection_origin_height, detection_origin_width, _ = detection_img.shape
 
@@ -113,10 +132,16 @@ class BatchGenerator(Sequence):
         template_target_right = template_target_cx + template_square_size // 2
         template_target_bottom = template_target_cy + template_square_size // 2
 
-        detection_target_left = detecion_target_cx - detection_square_size // 2
-        detection_target_top = detecion_target_cy - detection_square_size // 2
-        detection_target_right = detecion_target_cx + detection_square_size // 2
-        detection_target_bottom = detecion_target_cy + detection_square_size // 2
+        randon_shift_x = random.randint(0, detection_square_size // 2)
+        randon_shift_y = random.randint(0, detection_square_size // 2)
+
+        detection_target_cx_random = np.clip(0, random.randint(detecion_target_cx-randon_shift_x, detecion_target_cx+randon_shift_x), detection_origin_width-1)
+        detection_target_cy_random = np.clip(0, random.randint(detecion_target_cy - randon_shift_y, detecion_target_cy + randon_shift_y), detection_origin_height-1)
+
+        detection_target_left = detection_target_cx_random - detection_square_size // 2
+        detection_target_top = detection_target_cy_random - detection_square_size // 2
+        detection_target_right = detection_target_cx_random + detection_square_size // 2
+        detection_target_bottom = detection_target_cy_random + detection_square_size // 2
 
         # calculate template padding
         template_left_padding = -template_target_left if template_target_left < 0 else 0
@@ -177,21 +202,24 @@ class BatchGenerator(Sequence):
         tt = int(template_target_cy + template_top_padding - template_square_size // 2)
         template_cropped = new_template_img_padding[tt:tt+template_square_size, tl:tl+template_square_size, :]
 
-        dl = int(detecion_target_cx + detection_left_padding - detection_square_size // 2)
-        dt = int(detecion_target_cy + detection_top_padding - detection_square_size // 2)
+        dl = int(detection_target_cx_random + detection_left_padding - detection_square_size // 2)
+        dt = int(detection_target_cy_random + detection_top_padding - detection_square_size // 2)
         detection_cropped = new_detection_img_padding[dt:dt+detection_square_size, dl:dl+detection_square_size, :]
 
         detection_tlcords_of_padding_image = (
-            detecion_target_cx - detection_square_size // 2 + detection_left_padding,
-            detecion_target_cy - detection_square_size // 2 + detection_top_padding
+            detection_target_cx_random - detection_square_size // 2 + detection_left_padding,
+            detection_target_cy_random - detection_square_size // 2 + detection_top_padding
         )
         detection_rbcords_of_padding_image = (
-            detecion_target_cx + detection_square_size // 2 + detection_left_padding,
-            detecion_target_cy + detection_square_size // 2 + detection_top_padding
+            detection_target_cx_random + detection_square_size // 2 + detection_left_padding,
+            detection_target_cy_random + detection_square_size // 2 + detection_top_padding
         )
         # resize
         template_cropped_resized = cv2.resize(template_cropped, (127, 127))
-        detection_cropped_resized = cv2.resize(detection_cropped, (255, 255))
+        try:
+            detection_cropped_resized = cv2.resize(detection_cropped, (255, 255))
+        except:
+            print(1)
         detection_cropped_resized_ratio = round(255. / detection_square_size, 2)
 
         target_tlcords_of_padding_image = np.array(
@@ -238,30 +266,42 @@ class BatchGenerator(Sequence):
         neg_index = np.where(neg == 1)[0]
         class_target[neg_index] = [0., 1.]
         neg_num = len(neg_index)
-
         # draw pos and neg anchor box
-        # debug_img = detection_cropped_resized.copy()
-        # for i in range(pos_num):
-        #     index = pos_index[i]
-        #     cx, cy, w, h = self.anchor.get_anchors()[index]
-        #     x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
-        #     cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
-        #
-        # for i in range(neg_num):
-        #     index = neg_index[i]
-        #     cx, cy, w, h = self.anchor.get_anchors()[index]
-        #     x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
-        #     cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
-        # save_path = os.path.join('./{}.jpg'.format('pos_neg_anchor'))
-        # save_image(debug_img, save_path)
+        debug_img = detection_cropped_resized.copy()
+        # cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
+
+        for i in range(pos_num):
+            index = pos_index[i]
+            cx, cy, w, h = self.anchor.get_anchors()[index]
+            x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
+
+        for i in range(neg_num):
+            index = neg_index[i]
+            cx, cy, w, h = self.anchor.get_anchors()[index]
+            x1, y1, x2, y2 = int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)
+            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 1)
+        save_path = os.path.join('/home/seok/data/{}_{}.jpg'.format('pos_neg_anchor', id))
+        save_image(debug_img, save_path)
 
         pos_neg_diff = np.hstack((class_target, diff))
-
         template_image = normalize(template_cropped_resized)
         detection_image = normalize(detection_cropped_resized)
+
+        tem_img = template_cropped_resized.copy()
+        de_img = detection_cropped_resized.copy()
+
+        xx = center_to_corner(gt_box_in_detection)
+        de_img = cv2.rectangle(de_img, (xx[0], xx[1]), (xx[2], xx[3]), (255, 0, 0), 3)
+
+        save_path = os.path.join('./{}.jpg'.format('template'))
+        save_image(tem_img, save_path)
+
+        save_path = os.path.join('/home/seok/data/{}_{}.jpg'.format('detection', id))
+        save_image(de_img, save_path)
+
         gt_objectness = pos_neg_diff[:, :2].reshape(self.score_size, self.score_size, -1)
         gt_regression = pos_neg_diff[:, 2:].reshape(self.score_size, self.score_size, -1)
-
         return template_image, detection_image, gt_objectness, gt_regression
 
     def on_epoch_end(self):
